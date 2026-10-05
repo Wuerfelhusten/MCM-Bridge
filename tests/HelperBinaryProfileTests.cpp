@@ -1,0 +1,58 @@
+#include "MCMBridge/Core/HelperBinaryProfile.h"
+#include "MCMBridge/Core/HelperMenuCapture.h"
+#include <catch2/catch_test_macros.hpp>
+#include <limits>
+
+using namespace MCMBridge;
+
+TEST_CASE("Helper release profiles select an exact binary and its message ABI", "[helper][admission]")
+{
+	const auto profiles = HelperBinaryProfiles();
+	REQUIRE(profiles.size() == 5);
+	for (const auto& profile : profiles) {
+		REQUIRE(FindHelperBinaryProfile(profile.timestamp, profile.imageSize) == &profile);
+		REQUIRE_FALSE(FindHelperBinaryProfile(profile.timestamp + 1, profile.imageSize));
+		REQUIRE_FALSE(FindHelperBinaryProfile(profile.timestamp, profile.imageSize + 1));
+		for (const auto& function : profile.hooks) {
+			REQUIRE(function.size > 0);
+			REQUIRE(function.offset + function.size < profile.imageSize);
+		}
+		if (profile.messageABI == HelperMessageABI::kCoroutine) {
+			REQUIRE(profile.consumers[0].size > 0);
+			REQUIRE(profile.consumers[1].size > 0);
+		}
+	}
+	REQUIRE_FALSE(FindHelperBinaryProfile(0x612693CE, 0x116000));
+	REQUIRE_FALSE(FindHelperBinaryProfile(0x619B57BE, 0x121000));
+}
+
+TEST_CASE("Helper admission validates every hook before allowing any patch", "[helper][admission]")
+{
+	std::array<std::byte, 16> image{};
+	HelperBinaryProfile       profile{ "fixture", 1, 16, HelperMessageABI::kCallback, {}, {} };
+	const auto                hash = HelperCodeFingerprint(std::span(image).first(1));
+	for (std::size_t index = 0; index < profile.hooks.size(); ++index)
+		profile.hooks[index] = { index, 1, hash };
+	REQUIRE(VerifyHelperBinaryProfile(profile, image));
+	for (std::size_t index = 0; index < profile.hooks.size(); ++index) {
+		image[index] = std::byte{ 1 };
+		REQUIRE_FALSE(VerifyHelperBinaryProfile(profile, image));
+		image[index] = std::byte{};
+	}
+	REQUIRE_FALSE(VerifyHelperBinaryProfile(profile, std::span(image).first(15)));
+	profile.hooks[0].offset = std::numeric_limits<std::size_t>::max();
+	REQUIRE_FALSE(VerifyHelperBinaryProfile(profile, image));
+}
+
+TEST_CASE("Helper coroutine admission requires both verified consumer functions", "[helper][admission]")
+{
+	std::array<std::byte, 16> image{};
+	HelperBinaryProfile       profile{ "fixture", 1, 16, HelperMessageABI::kCoroutine, {}, {} };
+	const auto                hash = HelperCodeFingerprint(std::span(image).first(1));
+	for (auto& function : profile.hooks) function = { 0, 1, hash };
+	REQUIRE_FALSE(VerifyHelperBinaryProfile(profile, image));
+	profile.consumers = { { { 8, 1, hash }, { 9, 1, hash } } };
+	REQUIRE(VerifyHelperBinaryProfile(profile, image));
+	image[9] = std::byte{ 1 };
+	REQUIRE_FALSE(VerifyHelperBinaryProfile(profile, image));
+}

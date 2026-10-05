@@ -1,0 +1,50 @@
+{
+  "modName": "MBLHelper",
+  "keybinds": [
+    {
+      "id": "lab.function",
+      "desc": "Fixture function",
+      "action": {
+        "type": "CallFunction",
+        "form": "MBLHelper.esp|800",
+        "scriptName": "MBLHelper",
+        "function": "LogAction",
+        "params": [
+          "hotkey",
+          true,
+          2,
+          0.5
+        ]
+      }
+    },
+    {
+      "id": "lab.global",
+      "desc": "Fixture global",
+      "action": {
+        "type": "CallGlobalFunction",
+        "script": "MBLHelperActions",
+        "function": "Log",
+        "params": [
+          "hotkey"
+        ]
+      }
+    },
+    {
+      "id": "lab.event",
+      "desc": "Fixture event",
+      "action": {
+        "type": "SendEvent",
+        "form": "MBLHelper.esp|800",
+        "scriptName": "MBLHelper"
+      }
+    },
+    {
+      "id": "lab.console",
+      "desc": "Read game hour",
+      "action": {
+        "type": "RunConsoleCommand",
+        "command": "show GameHour"
+      }
+    }
+  ]
+}

@@ -1,0 +1,453 @@
+{
+  "modName": "MBLHelper",
+  "displayName": "Feature Lab Helper",
+  "minMcmVersion": 13,
+  "content": [
+    {
+      "type": "header",
+      "text": "Select a test page"
+    }
+  ],
+  "pages": [
+    {
+      "pageDisplayName": "Controls",
+      "cursorFillMode": "topToBottom",
+      "content": [
+        {
+          "type": "header",
+          "text": "All Helper control types"
+        },
+        {
+          "type": "text",
+          "id": "action",
+          "text": "Action button",
+          "action": {
+            "type": "CallFunction",
+            "function": "LogAction",
+            "params": [
+              "text",
+              true,
+              2,
+              0.5
+            ]
+          },
+          "valueOptions": {
+            "propertyName": "ActionLabel"
+          }
+        },
+        {
+          "type": "toggle",
+          "id": "bEnabled:Lab",
+          "text": "Enable group 1",
+          "valueOptions": {
+            "sourceType": "ModSettingBool",
+            "defaultValue": true
+          },
+          "groupControl": 1
+        },
+        {
+          "type": "hiddenToggle",
+          "id": "bHidden:Lab",
+          "text": "Hidden group 2",
+          "valueOptions": {
+            "sourceType": "ModSettingBool",
+            "defaultValue": true
+          },
+          "groupControl": 2
+        },
+        {
+          "type": "slider",
+          "id": "fAmount:Lab",
+          "text": "Fractional slider",
+          "valueOptions": {
+            "sourceType": "ModSettingFloat",
+            "min": -5,
+            "max": 10,
+            "step": 0.25,
+            "formatString": "{2}",
+            "defaultValue": 1.25
+          },
+          "help": "Current value: {value}"
+        },
+        {
+          "type": "stepper",
+          "id": "iStep:Lab",
+          "text": "Stepper",
+          "valueOptions": {
+            "sourceType": "ModSettingInt",
+            "options": [
+              "First",
+              "Second",
+              "Third"
+            ],
+            "defaultValue": 1
+          }
+        },
+        {
+          "type": "menu",
+          "id": "StaticMenu",
+          "text": "String menu",
+          "valueOptions": {
+            "propertyName": "MenuValue",
+            "options": [
+              "Alpha long",
+              "Beta long",
+              "Gamma long"
+            ],
+            "shortNames": [
+              "A",
+              "B",
+              "C"
+            ],
+            "defaultValue": "Beta long"
+          }
+        },
+        {
+          "type": "enum",
+          "id": "iEnum:Lab",
+          "text": "Numeric enum",
+          "valueOptions": {
+            "sourceType": "ModSettingInt",
+            "options": [
+              "Zero long",
+              "One long",
+              "Two long"
+            ],
+            "shortNames": [
+              "0",
+              "1",
+              "2"
+            ],
+            "defaultValue": 1
+          }
+        },
+        {
+          "type": "color",
+          "id": "iColor:Lab",
+          "text": "Color",
+          "valueOptions": {
+            "sourceType": "ModSettingInt",
+            "defaultValue": 3386111
+          }
+        },
+        {
+          "type": "keymap",
+          "id": "lab.function",
+          "text": "Function hotkey",
+          "ignoreConflicts": false
+        },
+        {
+          "type": "input",
+          "id": "Caption",
+          "text": "Property input",
+          "valueOptions": {
+            "propertyName": "Caption",
+            "defaultValue": "Initial / text"
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "menu",
+          "id": "DynamicMenu",
+          "text": "Dynamic options",
+          "valueOptions": {
+            "propertyName": "DynamicValue",
+            "defaultValue": "First"
+          }
+        },
+        {
+          "type": "text",
+          "id": "globalAction",
+          "text": "Global action",
+          "action": {
+            "type": "CallGlobalFunction",
+            "script": "MBLHelperActions",
+            "function": "Log",
+            "params": [
+              "global action"
+            ]
+          }
+        },
+        {
+          "type": "text",
+          "text": "$MBL_LABEL",
+          "valueOptions": {
+            "value": "$MBL_VALUE"
+          }
+        },
+        {
+          "type": "text",
+          "text": "$MBL_MISSING_KEY",
+          "valueOptions": {
+            "value": "Raw key expected"
+          }
+        }
+      ]
+    },
+    {
+      "pageDisplayName": "Sources",
+      "cursorFillMode": "leftToRight",
+      "content": [
+        {
+          "type": "header",
+          "text": "Every numeric value source"
+        },
+        {
+          "type": "toggle",
+          "id": "PropertyBool",
+          "text": "Property bool",
+          "valueOptions": {
+            "sourceType": "PropertyValueBool",
+            "propertyName": "BoolValue",
+            "defaultValue": true
+          }
+        },
+        {
+          "type": "slider",
+          "id": "PropertyInt",
+          "text": "Property int",
+          "valueOptions": {
+            "sourceType": "PropertyValueInt",
+            "propertyName": "IntValue",
+            "defaultValue": 2,
+            "min": 0,
+            "max": 10,
+            "step": 1
+          }
+        },
+        {
+          "type": "slider",
+          "id": "PropertyFloat",
+          "text": "Property float",
+          "valueOptions": {
+            "sourceType": "PropertyValueFloat",
+            "propertyName": "FloatValue",
+            "defaultValue": 1.25,
+            "min": -5,
+            "max": 10,
+            "step": 0.25
+          }
+        },
+        {
+          "type": "slider",
+          "id": "Global",
+          "text": "Global float",
+          "valueOptions": {
+            "sourceType": "GlobalValue",
+            "sourceForm": "MBLHelper.esp|801",
+            "min": 0,
+            "max": 10,
+            "step": 0.5,
+            "defaultValue": 2
+          }
+        },
+        {
+          "type": "slider",
+          "id": "iInteger:Lab",
+          "text": "INI integer",
+          "valueOptions": {
+            "sourceType": "ModSettingInt",
+            "min": 0,
+            "max": 10,
+            "step": 1
+          }
+        },
+        {
+          "type": "input",
+          "id": "sText:Lab",
+          "text": "INI string",
+          "valueOptions": {}
+        },
+        {
+          "type": "text",
+          "id": "captionRead",
+          "text": "Property text",
+          "valueOptions": {
+            "propertyName": "Caption"
+          }
+        },
+        {
+          "type": "toggle",
+          "id": "hiddenSource",
+          "text": "Control hidden group 2",
+          "valueOptions": {
+            "sourceType": "PropertyValueBool",
+            "propertyName": "BoolValue"
+          },
+          "action": {
+            "type": "CallFunction",
+            "function": "ToggleHiddenGroup"
+          }
+        }
+      ]
+    },
+    {
+      "pageDisplayName": "Conditions (1/2)",
+      "content": [
+        {
+          "type": "toggle",
+          "id": "bEnabled:Lab",
+          "text": "Group 1",
+          "valueOptions": {
+            "sourceType": "ModSettingBool"
+          },
+          "groupControl": 1
+        },
+        {
+          "type": "toggle",
+          "id": "bHidden:Lab",
+          "text": "Group 2",
+          "valueOptions": {
+            "sourceType": "ModSettingBool"
+          },
+          "groupControl": 2
+        },
+        {
+          "type": "slider",
+          "id": "fdisable:Lab",
+          "text": "disable when group 1 off",
+          "valueOptions": {
+            "sourceType": "ModSettingFloat",
+            "min": 0,
+            "max": 10,
+            "step": 0.25,
+            "formatString": "{2}",
+            "defaultValue": 1.25
+          },
+          "groupCondition": 1,
+          "groupBehavior": "disable"
+        },
+        {
+          "type": "slider",
+          "id": "fhide:Lab",
+          "text": "hide when group 1 off",
+          "valueOptions": {
+            "sourceType": "ModSettingFloat",
+            "min": 0,
+            "max": 10,
+            "step": 0.25,
+            "formatString": "{2}",
+            "defaultValue": 1.25
+          },
+          "groupCondition": 1,
+          "groupBehavior": "hide"
+        },
+        {
+          "type": "slider",
+          "id": "fskip:Lab",
+          "text": "skip when group 1 off",
+          "valueOptions": {
+            "sourceType": "ModSettingFloat",
+            "min": 0,
+            "max": 10,
+            "step": 0.25,
+            "formatString": "{2}",
+            "defaultValue": 1.25
+          },
+          "groupCondition": 1,
+          "groupBehavior": "skip"
+        },
+        {
+          "type": "text",
+          "text": "Condition {\"OR\":[1,2]}",
+          "groupCondition": {
+            "OR": [
+              1,
+              2
+            ]
+          },
+          "valueOptions": {
+            "value": "Satisfied"
+          }
+        },
+        {
+          "type": "text",
+          "text": "Condition {\"AND\":[1,2]}",
+          "groupCondition": {
+            "AND": [
+              1,
+              2
+            ]
+          },
+          "valueOptions": {
+            "value": "Satisfied"
+          }
+        },
+        {
+          "type": "text",
+          "text": "Condition {\"ONLY\":1}",
+          "groupCondition": {
+            "ONLY": 1
+          },
+          "valueOptions": {
+            "value": "Satisfied"
+          }
+        },
+        {
+          "type": "text",
+          "text": "Condition {\"NOT\":1}",
+          "groupCondition": {
+            "NOT": 1
+          },
+          "valueOptions": {
+            "value": "Satisfied"
+          }
+        },
+        {
+          "type": "text",
+          "text": "Condition [1,2]",
+          "groupCondition": [
+            1,
+            2
+          ],
+          "valueOptions": {
+            "value": "Satisfied"
+          }
+        }
+      ]
+    },
+    {
+      "pageDisplayName": "Empty",
+      "content": []
+    },
+    {
+      "pageDisplayName": "Custom content",
+      "customContent": {
+        "source": "skyui/skyui_splash.swf",
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "pageDisplayName": "Hotkeys",
+      "content": [
+        {
+          "type": "keymap",
+          "id": "lab.function",
+          "text": "function action",
+          "ignoreConflicts": false
+        },
+        {
+          "type": "keymap",
+          "id": "lab.global",
+          "text": "global action",
+          "ignoreConflicts": false
+        },
+        {
+          "type": "keymap",
+          "id": "lab.event",
+          "text": "event action",
+          "ignoreConflicts": false
+        },
+        {
+          "type": "keymap",
+          "id": "lab.console",
+          "text": "console action",
+          "ignoreConflicts": true
+        }
+      ]
+    }
+  ]
+}

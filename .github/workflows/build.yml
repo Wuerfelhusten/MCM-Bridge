@@ -1,0 +1,100 @@
+name: Build tagged package
+
+on:
+  push:
+    tags:
+      - '*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tagged-build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Validate tag and source version
+        env:
+          BUILD_TAG: ${{ github.ref_name }}
+        run: |
+          $project = Get-Content CMakeLists.txt -Raw
+          if ($project -notmatch 'project\(MCMBridge VERSION ([0-9]+\.[0-9]+\.[0-9]+)') {
+            throw 'Missing CMake project version'
+          }
+          $version = $Matches[1]
+          if ($env:BUILD_TAG -notin @($version, "v$version")) {
+            throw "Tag must be $version or v$version"
+          }
+          $manifest = Get-Content vcpkg.json -Raw | ConvertFrom-Json
+          if ($manifest.'version-string' -ne $version) {
+            throw 'CMake and vcpkg versions differ'
+          }
+
+      - name: Check out pinned vcpkg
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          repository: microsoft/vcpkg
+          ref: 32305df7d0b9a308e6ac454dd98ebfe550342c09
+          path: .build-tools/vcpkg
+          persist-credentials: false
+
+      - name: Prepare build tools
+        run: |
+          $vcpkg = Join-Path $env:GITHUB_WORKSPACE '.build-tools/vcpkg'
+          & "$vcpkg/bootstrap-vcpkg.bat" -disableMetrics
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "VCPKG_ROOT=$vcpkg" >> $env:GITHUB_ENV
+          python -m pip install --disable-pip-version-check clang-format==22.1.3
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Configure release build
+        run: |
+          # This checkout has no sibling reference repositories or local documentation.
+          # Select the pinned wheel binary, not a different LLVM already on PATH.
+          $formatter = python -c "import pathlib,clang_format; print(pathlib.Path(clang_format.__file__).parent / 'data/bin/clang-format.exe')"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $formatter = $formatter.Trim().Replace('\', '/')
+          cmake --preset FLATRIM -DMCM_BRIDGE_DEPLOY_DIR= -DMCM_BRIDGE_COMPILE_SCRIPTS=OFF `
+            -DMCM_BRIDGE_NATIVE_HOST_PREFLIGHT=OFF "-DMCM_BRIDGE_CLANG_FORMAT=$formatter" `
+            -DMCM_BRIDGE_HOST_REFERENCE= -DMCM_BRIDGE_HELPER_COROUTINE_SOURCE=
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build and test Debug and Release
+        run: |
+          foreach ($configuration in @('Debug', 'Release')) {
+            cmake --build --preset "FLATRIM-$configuration" --parallel 4
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            ctest --preset "FLATRIM-$configuration" --parallel 4
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          cmake --build --preset FLATRIM-Release --target format-check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Package and verify runtime files
+        run: |
+          cpack --config build/CPackConfig.cmake -C Release
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cmake '-DROOT=.' '-DBUILD_ROOT=build' -P cmake/VerifyReleasePackage.cmake
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload package, not a GitHub Release
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: MCMBridge-${{ github.ref_name }}
+          path: |
+            build/packages/MCMBridge-*.zip
+            build/packages/SHA256.txt
+          if-no-files-found: error
+          retention-days: 90

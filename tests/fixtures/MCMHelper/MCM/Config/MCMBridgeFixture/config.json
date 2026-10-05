@@ -1,0 +1,124 @@
+{
+  "modName": "MCMBridgeFixture",
+  "displayName": "MCM Bridge Helper Fixture",
+  "minMcmVersion": 9,
+  "pages": [
+    {
+      "pageDisplayName": "General",
+      "cursorFillMode": "topToBottom",
+      "content": [
+        {
+          "type": "header",
+          "text": "Fixture"
+        },
+        {
+          "id": "bInternal:General",
+          "type": "hiddenToggle",
+          "valueOptions": {
+            "sourceType": "ModSettingBool"
+          }
+        },
+        {
+          "id": "bEnabled:General",
+          "type": "toggle",
+          "text": "Enabled",
+          "groupControl": 1,
+          "valueOptions": {
+            "sourceType": "ModSettingBool",
+            "defaultValue": true
+          }
+        },
+        {
+          "id": "fAmount:General",
+          "type": "slider",
+          "text": "Amount",
+          "groupCondition": 1,
+          "groupBehavior": "disable",
+          "valueOptions": {
+            "sourceType": "ModSettingFloat",
+            "min": 0.0,
+            "max": 10.0,
+            "step": 0.5,
+            "formatString": "{0}"
+          }
+        },
+        {
+          "id": "iMode:General",
+          "type": "enum",
+          "text": "Mode",
+          "valueOptions": {
+            "sourceType": "ModSettingInt",
+            "options": ["One", "Two", "Three"]
+          }
+        },
+        {
+          "id": "sDynamicMode:General",
+          "type": "menu",
+          "text": "Dynamic Mode",
+          "valueOptions": {
+            "sourceType": "PropertyValueString",
+            "sourceForm": "Fixture.esp|1234",
+            "propertyName": "DynamicMode"
+          },
+          "action": {
+            "type": "CallFunction",
+            "function": "ApplyDynamicMode",
+            "form": "Fixture.esp|1234",
+            "scriptName": "FixtureConfig",
+            "params": ["{value}", true, 2]
+          }
+        },
+        {
+          "id": "iSize:General",
+          "type": "stepper",
+          "text": "Size",
+          "valueOptions": {
+            "sourceType": "ModSettingInt",
+            "options": ["Small", "Medium", "Large"]
+          }
+        },
+        {
+          "id": "iHotkey:General",
+          "type": "keymap",
+          "text": "Hotkey",
+          "valueOptions": {
+            "sourceType": "ModSettingInt",
+            "defaultValue": 42
+          }
+        },
+        {
+          "id": "rTint:General",
+          "type": "color",
+          "text": "Tint",
+          "valueOptions": {
+            "sourceType": "ModSettingInt",
+            "defaultValue": "{r}17,34,51"
+          }
+        },
+        {
+          "id": "sName:General",
+          "type": "input",
+          "text": "Name",
+          "valueOptions": {
+            "defaultValue": "Default Name"
+          }
+        },
+        {
+          "id": "sStatus:General",
+          "type": "text",
+          "text": "Status",
+          "valueOptions": {
+            "propertyName": "StatusText",
+            "defaultValue": "Idle"
+          },
+          "action": {
+            "type": "CallGlobalFunction",
+            "script": "FixtureActions",
+            "function": "ShowStatus",
+            "params": ["{value}"]
+          }
+        }
+      ]
+    }
+  ]
+}

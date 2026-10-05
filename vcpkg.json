@@ -1,0 +1,16 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "mcm-bridge",
+  "version-string": "1.0.0",
+  "description": "Native MCM host for SKSE Menu Framework",
+  "license": "GPL-3.0-only",
+  "dependencies": [
+    "catch2",
+    "commonlibsse-ng",
+    "minhook",
+    "nlohmann-json",
+    "simpleini",
+    "spdlog"
+  ],
+  "builtin-baseline": "32305df7d0b9a308e6ac454dd98ebfe550342c09"
+}

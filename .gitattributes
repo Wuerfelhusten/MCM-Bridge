@@ -1,0 +1,10 @@
+* text=auto eol=lf
+
+*.pex binary
+
+/AGENTS.md export-ignore
+/docs export-ignore
+
+*.sln text eol=crlf
+*.vcxproj text eol=crlf
+*.vcxproj.filters text eol=crlf

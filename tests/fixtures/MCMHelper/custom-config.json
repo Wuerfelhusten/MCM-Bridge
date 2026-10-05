@@ -1,0 +1,17 @@
+{
+  "modName": "CustomFixture",
+  "displayName": "Custom Fixture",
+  "customContent": {
+    "source": "fixture/main.swf",
+    "x": 12,
+    "y": 34.5
+  },
+  "pages": [
+    {
+      "pageDisplayName": "Custom Page",
+      "customContent": {
+        "source": "fixture/page.swf"
+      }
+    }
+  ]
+}

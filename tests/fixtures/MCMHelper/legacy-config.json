@@ -1,0 +1,16 @@
+{
+  "modName": "LegacyFixture",
+  "displayName": "Legacy Fixture",
+  "minMcmVersion": 11,
+  "content": [
+    {
+      "type": "menu",
+      "id": "iMode:General",
+      "text": "Mode",
+      "valueOptions": {
+        "sourceType": "ModSettingInt",
+        "options": ["First", "Second", "Third"]
+      }
+    }
+  ]
+}

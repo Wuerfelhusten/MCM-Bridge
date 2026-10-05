@@ -1,0 +1,42 @@
+cmake_minimum_required(VERSION 3.28)
+set(FIXTURE "${OUTPUT}/repository-script-fixture")
+set(STAGED "${FIXTURE}/staged")
+file(MAKE_DIRECTORY "${FIXTURE}")
+file(COPY "${ROOT}/scripts/Source" "${ROOT}/scripts/Compiled" DESTINATION "${FIXTURE}")
+
+function(STAGE EXPECTED_ERROR)
+	execute_process(COMMAND "${CMAKE_COMMAND}" "-DROOT=${FIXTURE}"
+		"-DBUILD_SCRIPTS=${STAGED}" -DMODE=stage -P "${ROOT}/cmake/RepositoryScripts.cmake"
+		RESULT_VARIABLE STATUS OUTPUT_VARIABLE LOG ERROR_VARIABLE ERRORS)
+	if(EXPECTED_ERROR STREQUAL "")
+		if(NOT STATUS EQUAL 0)
+			message(FATAL_ERROR "Repository script staging failed: ${LOG}${ERRORS}")
+		endif()
+	elseif(STATUS EQUAL 0 OR NOT ERRORS MATCHES "${EXPECTED_ERROR}")
+		message(FATAL_ERROR "Expected rejection ${EXPECTED_ERROR}: ${LOG}${ERRORS}")
+	endif()
+endfunction()
+
+STAGE("")
+foreach(SCRIPT MCMBridgeNative MCMBridgeRegistry SKI_ConfigBase SKI_ConfigManager SKI_QuestBase SKI_PlayerLoadGameAlias)
+	file(SHA256 "${FIXTURE}/Compiled/${SCRIPT}.pex" BEFORE)
+	file(SHA256 "${STAGED}/${SCRIPT}.pex" AFTER)
+	if(NOT BEFORE STREQUAL AFTER)
+		message(FATAL_ERROR "Staged PEX changed: ${SCRIPT}")
+	endif()
+endforeach()
+
+file(APPEND "${FIXTURE}/Source/host/SKI_ConfigBase.psc" "\n; changed source\n")
+STAGE("Repository script mismatch: Source/host/SKI_ConfigBase.psc")
+file(COPY "${ROOT}/scripts/Source/host/SKI_ConfigBase.psc" DESTINATION "${FIXTURE}/Source/host")
+file(APPEND "${FIXTURE}/Compiled/SKI_ConfigBase.pex" "corrupt")
+STAGE("Repository script mismatch: Compiled/SKI_ConfigBase.pex")
+file(COPY "${ROOT}/scripts/Compiled/SKI_ConfigBase.pex" DESTINATION "${FIXTURE}/Compiled")
+
+# Rejections must not overwrite an already valid staged set.
+file(SHA256 "${ROOT}/scripts/Compiled/SKI_ConfigBase.pex" BEFORE)
+file(SHA256 "${STAGED}/SKI_ConfigBase.pex" AFTER)
+if(NOT BEFORE STREQUAL AFTER)
+	message(FATAL_ERROR "Rejected script input changed the staged runtime")
+endif()
+STAGE("")
