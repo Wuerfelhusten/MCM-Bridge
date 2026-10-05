@@ -68,8 +68,7 @@ namespace MCMBridge
 			});
 			return;
 		}
-		if (refreshing || activeScan || activeWrite || activeHelp || activeHostedPage || activeHostedClose ||
-			IsClassicMCMActive()) {
+		if (refreshing || activeScan || activeWrite || activeHelp || activeHostedPage || activeHostedClose) {
 			TaskScheduler::GetSingleton().After(retryDelay, [identity = std::move(a_identity), requestKey = std::move(a_requestKey), a_operationSession]() mutable {
 				GetSingleton().StartControlHelp(std::move(identity), std::move(requestKey), a_operationSession);
 			});
@@ -84,7 +83,7 @@ namespace MCMBridge
 		activeHelp = std::make_shared<ClassicHelpOperation>(
 			hostedScript,
 			std::move(a_identity),
-			[this] { return IsClassicMCMActive(); },
+			ClassicHelpOperation::BusyCheck{},
 			[this, a_operationSession, settingID, requestKey = std::move(a_requestKey)](Result<std::string> a_result) {
 				if (a_operationSession != session) {
 					return;

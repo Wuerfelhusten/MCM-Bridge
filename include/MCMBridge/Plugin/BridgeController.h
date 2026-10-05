@@ -9,7 +9,6 @@
 #include "MCMBridge/Core/FacadeCallState.h"
 #include "MCMBridge/Core/HostedPageRoute.h"
 #include "MCMBridge/Core/MenuOptionResolver.h"
-#include "MCMBridge/Core/RegistrySettler.h"
 #include "MCMBridge/Core/ViewLoadState.h"
 #include "MCMBridge/Discovery/AutomaticRegistryProvider.h"
 #include "MCMBridge/Papyrus/ClassicHelpOperation.h"
@@ -53,22 +52,19 @@ namespace MCMBridge
 		Result<bool>                       ResetNativeHost(const RE::BSTSmartPointer<RE::BSScript::Object>& a_manager);
 		NativeRegistryProvider&            NativeRegistry() { return registry.Native(); }
 		void                               RequestRefresh(bool a_navigationOnly = false);
-		void                               NotifyRegistryEvent(bool a_reset);
+		void                               NotifyRegistryEvent();
 		void                               NotifyFrontendInvalidation();
-		void                               NotifyOriginalMCMState(bool a_open);
 		void                               RequestControlHelp(SettingIdentity a_identity, MCMValue a_value);
 		void                               RetryFailed();
 		void                               RetryHostedPage();
 		void                               Submit(WriteCommand a_command) override;
 		std::shared_ptr<const MCMSnapshot> Snapshot() const;
 		bool                               IsSessionReady() const { return sessionReady.load(); }
-		bool                               IsNativeHost() const { return nativeHost.load(); }
 		// Thread-safe selection capture; execution and lease checks stay on the game queue.
 		std::optional<std::uint64_t> CaptureScriptView(std::string_view a_modID) const;
 		void                         QueueScriptPage(std::uint64_t a_session, std::uint64_t a_revision, std::string a_modID, std::string a_page, bool a_opening = false);
 		void                         ObserveCustomContent(const MCMMod& a_mod, const MCMPage& a_page, CustomContentOrigin a_origin = CustomContentOrigin::kUser);
-		bool                         IsSkyUIAvailable() const;
-		bool                         IsClassicMCMActive() const;
+		bool                         IsRegistryAvailable() const;
 		void                         BeginFrameworkFrame();
 		void                         OpenFrameworkView();
 		void                         CloseFrameworkView();
@@ -148,21 +144,16 @@ namespace MCMBridge
 		std::uint64_t       nextHostContext{ 1 };
 		bool                AdoptHostedPage(std::uint64_t& a_revision, const std::string& a_modID, std::string& a_pageID, const MCMPage& a_page);
 		HostedPageRoute     hostedPageRoute;
-		void                ApplyNativeFrontendPolicy();
-		std::atomic_bool    nativeHost{ true };
 		CustomContentVisits customVisits;
 		bool                AllowsRefresh() const;
 		void                QueueNavigationPoll();
 		void                PollNavigation();
-		void                RefreshOnGameThread(bool a_stabilityCheck);
+		void                RefreshOnGameThread(bool a_registryCheck);
 		void                QueueRegistryCheck();
 		void                BeginScan(std::vector<LiveMCM> a_entries);
 		void                ReadNativeNavigation();
 		void                ScanNext(std::uint64_t a_session);
 		void                FinishScan(std::uint64_t a_session);
-		void                PauseScanForOriginalMCM(std::uint64_t a_session);
-		void                HandleOriginalMCMState(bool a_open, std::uint64_t a_session);
-		void                ScheduleStabilityCheck(std::uint64_t a_session);
 		void                ProcessWrites();
 		void                DeferWrite(WriteCommand a_command, std::chrono::milliseconds a_delay);
 		void                RejectWrite(const WriteCommand& a_command, const BridgeError& a_error);
@@ -214,6 +205,8 @@ namespace MCMBridge
 		void                   EndCaptureSession();
 
 		AutomaticRegistryProvider registry;
+		// Last successfully observed registration identities; navigation polling owns pages.
+		std::vector<std::string> registryIDs;
 		struct ScriptPageRequest
 		{
 			std::uint64_t session{};
@@ -235,7 +228,6 @@ namespace MCMBridge
 		std::shared_ptr<WriteTiming>           activeWriteTiming;
 		std::vector<LiveMCM>                   liveEntries;
 		MCMSnapshot                            pendingSnapshot;
-		std::shared_ptr<const MCMSnapshot>     scanCache;
 		std::shared_ptr<ClassicScanOperation>  activeScan;
 		std::shared_ptr<ClassicWriteOperation> activeWrite;
 		std::shared_ptr<ClassicHelpOperation>  activeHelp;
@@ -256,7 +248,6 @@ namespace MCMBridge
 		std::unordered_set<std::string>        quarantined;
 		std::unordered_set<std::string>        pendingHelp;
 		std::unordered_set<std::string>        resolvedHelp;
-		RegistrySettler                        registrySettler;
 		std::size_t                            scanIndex{};
 		std::uint64_t                          session{};
 		std::uint64_t                          hostedRefreshToken{};
@@ -270,21 +261,14 @@ namespace MCMBridge
 		std::atomic_bool                       sessionReady{};
 		std::atomic_bool                       refreshRequested{};
 		std::atomic_bool                       fullRefreshRequested{};
-		std::atomic_bool                       navigationRefreshRequested{};
-		bool                                   navigationOnly{};
 		std::atomic_bool                       registryEventQueued{};
 		std::atomic_bool                       registryCheckPending{};
-		std::atomic_bool                       registryResetRequested{};
 		std::atomic_bool                       hostedDriveQueued{};
 		std::atomic_bool                       hostedRenderedThisFrame{};
 		std::atomic_bool                       frontendInvalidationQueued{};
-		std::atomic_bool                       originalMCMOpen{};
 		bool                                   hostedReady{};
 		bool                                   activeWriteHosted{};
 		bool                                   refreshing{};
 		bool                                   writeRetryScheduled{};
-		bool                                   registryRetryScheduled{};
-		bool                                   waitingForMCM{};
-		bool                                   scanPausedForOriginalMCM{};
 	};
 }

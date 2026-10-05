@@ -106,8 +106,6 @@ namespace
 		{
 			auto&      host = MCMBridge::NativeFacadeSession();
 			const auto token = host.TokenForOwner(reinterpret_cast<std::uintptr_t>(a_object.get()));
-			if (!token && !MCMBridge::BridgeController::GetSingleton().IsNativeHost())
-				return func(a_result, a_object, a_message, a_withCancel, a_accept, a_cancel);
 			*a_result = MCMBridge::HelperMessageTask::Rejected();
 			auto* tasks = SKSE::GetTaskInterface();
 			if (!token || !tasks)

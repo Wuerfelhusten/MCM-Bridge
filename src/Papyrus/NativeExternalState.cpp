@@ -1,7 +1,6 @@
 #include "MCMBridge/Papyrus/NativeHostUI.h"
 
 #include "MCMBridge/Papyrus/NativeFacade.h"
-#include "MCMBridge/Plugin/BridgeController.h"
 
 namespace
 {
@@ -31,7 +30,7 @@ namespace MCMBridge::NativeHostUI
 	bool InterceptExternalState(const RE::BSScript::StackFrame& a_frame, std::string_view a_menu,
 		std::string_view a_target, RE::BSScript::Variable& a_result)
 	{
-		if (!BridgeController::GetSingleton().IsNativeHost() || a_menu != "Journal Menu" ||
+		if (a_menu != "Journal Menu" ||
 			(!a_target.empty() && a_target != "_root.ConfigPanelFader.configPanel.contentHolder.modListPanel.decorTitle.textHolder.textField.text"))
 			return false;
 		const auto* caller = a_frame.previousFrame;

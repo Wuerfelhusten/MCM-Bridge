@@ -8,10 +8,7 @@ namespace MCMBridge
 	struct LiveMCM
 	{
 		MCMDescriptor                    descriptor;
-		std::int32_t                     configIndex{ -1 };
 		std::shared_ptr<IMCMHostAdapter> adapter;
-		std::string                      registryID;
-		std::string                      registryDisplayName;
 	};
 
 	class ILiveMCMRegistryProvider : public IMCMRegistryProvider

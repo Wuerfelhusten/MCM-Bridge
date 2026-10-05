@@ -5,7 +5,6 @@
 #include "MCMBridge/Core/HostedPageMerge.h"
 #include "MCMBridge/Core/MenuOptionResolver.h"
 #include "MCMBridge/Core/OperationContext.h"
-#include "MCMBridge/Core/RegistrySettler.h"
 #include "MCMBridge/Core/SkyUIFormat.h"
 #include "MCMBridge/Core/SkyUIRichText.h"
 #include "MCMBridge/Core/Slider.h"
@@ -556,29 +555,6 @@ TEST_CASE("Menu option capture accepts only the scoped target")
 	auto result = resolver.Resolve(identity);
 	REQUIRE(result);
 	CHECK(result->options.size() == 2);
-}
-
-TEST_CASE("Registry settling requires two unchanged observations")
-{
-	MCMBridge::RegistrySettler settler;
-	CHECK(settler.Observe({ "b", "a" }) == MCMBridge::RegistrySettleResult::kChanged);
-	CHECK(settler.Observe({ "a", "b" }) == MCMBridge::RegistrySettleResult::kWaiting);
-	CHECK(settler.Observe({ "b", "a" }) == MCMBridge::RegistrySettleResult::kReady);
-	CHECK_FALSE(settler.ShouldContinue());
-
-	settler.Reset();
-	CHECK(settler.Observe({}) == MCMBridge::RegistrySettleResult::kEmpty);
-	CHECK(settler.ShouldContinue());
-}
-
-TEST_CASE("Registry settling detects later SkyUI registrations after polling stops")
-{
-	MCMBridge::RegistrySettler settler;
-	CHECK(settler.Observe({ "first" }) == MCMBridge::RegistrySettleResult::kChanged);
-	CHECK(settler.Observe({ "first" }) == MCMBridge::RegistrySettleResult::kWaiting);
-	CHECK(settler.Observe({ "first" }) == MCMBridge::RegistrySettleResult::kReady);
-	CHECK_FALSE(settler.ShouldContinue());
-	CHECK(settler.Observe({ "first", "second" }) == MCMBridge::RegistrySettleResult::kChanged);
 }
 
 TEST_CASE("Operation context rejects late callbacks, timeouts, and invalid sessions")

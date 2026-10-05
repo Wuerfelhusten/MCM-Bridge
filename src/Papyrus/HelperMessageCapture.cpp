@@ -103,14 +103,12 @@ namespace
 	struct ShowMessage
 	{
 		// The by-value 64-byte callback is passed indirectly on Windows x64.
-		// Consume its argument here; the trampoline consumes it only on the fallback path.
+		// The native host consumes the argument even when the execution owner expired.
 		static void thunk(const Object& a_object, TextView a_message,
 			bool a_withCancel, TextView a_accept, TextView a_cancel, void* a_callback)
 		{
 			auto&      host = MCMBridge::NativeFacadeSession();
 			const auto token = host.TokenForOwner(reinterpret_cast<std::uintptr_t>(a_object.get()));
-			if (!token && !MCMBridge::BridgeController::GetSingleton().IsNativeHost())
-				return func(a_object, a_message, a_withCancel, a_accept, a_cancel, a_callback);
 			const auto consume = std::unique_ptr<void, decltype(&MCMBridge::HelperMessageCallback::DestroyArgument)>(
 				a_callback, &MCMBridge::HelperMessageCallback::DestroyArgument);
 			auto* tasks = SKSE::GetTaskInterface();

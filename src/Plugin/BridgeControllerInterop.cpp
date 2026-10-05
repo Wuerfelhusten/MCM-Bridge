@@ -12,7 +12,7 @@ namespace MCMBridge
 			return MCM_HOST_UNAVAILABLE;
 		if (a_owner.empty())
 			return MCM_HOST_INVALID_ARGUMENT;
-		const bool        busy = refreshing || activeScan || activeWrite || activeHelp || activeHostedPage || activeHostedClose || IsClassicMCMActive();
+		const bool        busy = refreshing || activeScan || activeWrite || activeHelp || activeHostedPage || activeHostedClose;
 		ExternalAdmission result;
 		bool              closeHosted{};
 		{

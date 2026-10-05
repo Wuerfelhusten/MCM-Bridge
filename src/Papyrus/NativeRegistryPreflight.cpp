@@ -35,7 +35,7 @@ namespace MCMBridge
 				RE::BSTSmartPointer<RE::BSScript::Object> object;
 				if (!quest || !vm->FindBoundObject(policy->GetHandleForObject(quest->GetFormType(), quest), descriptor.scriptName.c_str(), object) || !object)
 					throw std::runtime_error(std::format("Cannot resolve {}", descriptor.stableID));
-				const auto verified = CreateLiveMCM(object, entry.configIndex);
+				const auto verified = CreateLiveMCM(object);
 				if (!verified || verified->descriptor.stableID != descriptor.stableID)
 					throw std::runtime_error("Live MCM identity changed");
 				const auto token = static_cast<std::uint64_t>(bindings.size()) + 1;

@@ -3,7 +3,6 @@
 
 #include "MCMBridge/Core/HelperMenuCapture.h"
 #include "MCMBridge/Papyrus/NativeFacade.h"
-#include "MCMBridge/Plugin/BridgeController.h"
 
 #include <MinHook.h>
 #include <limits>
@@ -26,10 +25,7 @@ namespace
 		auto&      host = MCMBridge::NativeFacadeSession();
 		const auto token = host.TokenForOwner(reinterpret_cast<std::uintptr_t>(a_object.get()));
 		if (!token) {
-			if (!MCMBridge::BridgeController::GetSingleton().IsNativeHost())
-				original(a_object, a_options);
-			else
-				SKSE::log::debug("Discarded Helper menu options without a native execution owner");
+			SKSE::log::debug("Discarded Helper menu options without a native execution owner");
 			return;
 		}
 		try {

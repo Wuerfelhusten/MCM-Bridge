@@ -16,7 +16,7 @@ namespace
 	uint32_t MCM_HOST_CALL                                         Ready()
 	{
 		const auto& controller = MCMBridge::BridgeController::GetSingleton();
-		return controller.IsNativeHost() && controller.IsSessionReady() ? 1U : 0U;
+		return controller.IsSessionReady() ? 1U : 0U;
 	}
 	MCMHostResult MCM_HOST_CALL Begin(const char* a_owner, uint32_t a_restore, MCMHostContext* a_context)
 	{

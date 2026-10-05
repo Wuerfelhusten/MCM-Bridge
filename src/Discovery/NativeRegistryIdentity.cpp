@@ -16,7 +16,7 @@ namespace MCMBridge
 		RE::BSTSmartPointer<RE::BSScript::Object> current;
 		if (!vm || !vm->FindBoundObject(a_menu->GetHandle(), a_menu->GetTypeInfo()->GetName(), current) || current != a_menu)
 			return std::unexpected(BridgeError{ BridgeErrorCode::kStaleSnapshot, "The requesting script is no longer bound" });
-		const auto live = CreateLiveMCM(a_menu, *slot);
+		const auto live = CreateLiveMCM(a_menu);
 		if (!live || live->descriptor.stableID != entry->identity)
 			return std::unexpected(BridgeError{ BridgeErrorCode::kStaleSnapshot, "The requesting MCM identity changed" });
 		return entry->identity;

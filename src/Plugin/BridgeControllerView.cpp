@@ -17,7 +17,7 @@ namespace MCMBridge
 
 	void BridgeController::ObserveCustomContent(const MCMMod& a_mod, const MCMPage& a_page, CustomContentOrigin a_origin)
 	{
-		if (!IsNativeHost() || !a_page.customContent)
+		if (!a_page.customContent)
 			return;
 		{
 			const std::scoped_lock lock(hostedRequestMutex);

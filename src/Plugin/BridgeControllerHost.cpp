@@ -33,7 +33,7 @@ namespace MCMBridge
 	MCMHostResult BridgeController::BeginHostContext(std::string_view a_owner, bool a_restore, MCMHostContext& a_context)
 	{
 		a_context = 0;
-		if (!IsNativeHost() || !IsSessionReady() || !registry.Native().IsAvailable())
+		if (!IsSessionReady() || !registry.Native().IsAvailable())
 			return MCM_HOST_UNAVAILABLE;
 		if (directContext.id)
 			return MCM_HOST_BUSY;

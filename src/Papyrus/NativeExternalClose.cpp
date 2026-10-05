@@ -9,7 +9,7 @@ namespace MCMBridge::NativeHostUI
 		std::string_view a_target, RE::BSScript::Variable& a_result)
 	{
 		auto& controller = BridgeController::GetSingleton();
-		if (!controller.IsNativeHost() || a_menu != "Journal Menu" ||
+		if (a_menu != "Journal Menu" ||
 			a_target != "_root.ConfigPanelFader.configPanel.contentHolder.modListPanel.decorTitle.textHolder.textField.text")
 			return false;
 		const auto* caller = a_frame.previousFrame;
@@ -39,7 +39,7 @@ namespace MCMBridge::NativeHostUI
 		if (auto* tasks = SKSE::GetTaskInterface()) {
 			tasks->AddTask([script = std::move(script), identity = *identity, revision = *revision, closeFrontend = close.GetBool()] {
 				auto& current = BridgeController::GetSingleton();
-				if (!current.IsNativeHost() || NativeFacadeSession().Session() != identity.session)
+				if (NativeFacadeSession().Session() != identity.session)
 					return;
 				const auto registered = current.NativeRegistry().ResolveIdentity(script);
 				if (!registered || *registered != identity.modID)

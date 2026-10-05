@@ -11,8 +11,6 @@ namespace
 
 	bool Redirect(const RE::BSScript::StackFrame& a_frame)
 	{
-		if (!MCMBridge::BridgeController::GetSingleton().IsNativeHost())
-			return false;
 		const auto* caller = a_frame.previousFrame;
 		if (!caller || !caller->owningFunction || !caller->self.IsObject() ||
 			caller->owningFunction->GetObjectTypeName() != "nl_mcm" ||
@@ -35,7 +33,7 @@ namespace
 		if (auto* tasks = SKSE::GetTaskInterface()) {
 			tasks->AddTask([script = std::move(script), page = std::move(page), session, hotkey]() mutable {
 				auto& controller = MCMBridge::BridgeController::GetSingleton();
-				if (!controller.IsNativeHost() || !controller.IsSessionReady() || MCMBridge::NativeFacadeSession().Session() != session)
+				if (!controller.IsSessionReady() || MCMBridge::NativeFacadeSession().Session() != session)
 					return;
 				const auto identity = controller.NativeRegistry().ResolveIdentity(script);
 				if (!identity) {

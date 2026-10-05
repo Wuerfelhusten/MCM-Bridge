@@ -64,17 +64,6 @@ namespace MCMBridge
 		if (!command) {
 			return;
 		}
-		if (IsClassicMCMActive()) {
-			if (!waitingForMCM)
-				SKSE::log::info("Deferring setting changes while a classic MCM or registry operation is active");
-			waitingForMCM = true;
-			DeferWrite(std::move(*command), std::chrono::milliseconds(100));
-			return;
-		}
-		if (waitingForMCM) {
-			waitingForMCM = false;
-			SKSE::log::info("Resuming queued setting changes after the classic MCM became idle");
-		}
 		const auto snapshot = snapshots.Get();
 		auto       validated = ValidateWrite(*snapshot, *command);
 		if (!validated) {
@@ -140,7 +129,7 @@ namespace MCMBridge
 			std::move(script),
 			std::move(control),
 			operationCommand,
-			[this] { return IsClassicMCMActive(); },
+			ClassicWriteOperation::BusyCheck{},
 			[this, operationCommand, operationSession, hosted, viewRevision, modID = live->descriptor.stableID](Result<MCMValue> a_result) {
 				if (operationSession != session) {
 					return;
@@ -169,8 +158,6 @@ namespace MCMBridge
 					quarantined.insert(modID);
 					if (hosted)
 						ClearHostedState();
-				} else if (hosted && !a_result && a_result.error().code == BridgeErrorCode::kBusy && originalMCMOpen.load()) {
-					ClearHostedState();
 				} else if (hosted && !a_result) {
 					CloseHostedSession([this, operationCommand, a_result, modID] {
 						if (quarantined.contains(modID)) {

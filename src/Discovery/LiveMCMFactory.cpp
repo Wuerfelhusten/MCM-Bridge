@@ -1,35 +1,9 @@
 #include "MCMBridge/Discovery/LiveMCMFactory.h"
 
 #include "MCMBridge/Core/StableId.h"
-#include "MCMBridge/Papyrus/MCMScript.h"
 
 namespace
 {
-	std::optional<std::string> ReadModName(const RE::BSTSmartPointer<RE::BSScript::Object>& a_script);
-
-	class SkyUIHostAdapter final : public MCMBridge::IMCMHostAdapter
-	{
-	public:
-		SkyUIHostAdapter(RE::BSTSmartPointer<RE::BSScript::Object> a_script, std::string a_name) :
-			script(std::move(a_script)), name(std::move(a_name)) {}
-
-		std::shared_ptr<MCMBridge::IClassicScript> CreateSession() const override
-		{
-			return std::make_shared<MCMBridge::MCMScript>(script);
-		}
-		bool IsValid() const override
-		{
-			auto*                                     vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
-			RE::BSTSmartPointer<RE::BSScript::Object> bound;
-			return vm && script && script->GetTypeInfo() && ReadModName(script) == name &&
-			       vm->FindBoundObject(script->GetHandle(), script->GetTypeInfo()->GetName(), bound) && bound.get() == script.get();
-		}
-
-	private:
-		RE::BSTSmartPointer<RE::BSScript::Object> script;
-		std::string                               name;
-	};
-
 	std::string ReadScriptName(const RE::BSTSmartPointer<RE::BSScript::Object>& a_script)
 	{
 		const auto* type = a_script ? a_script->GetTypeInfo() : nullptr;
@@ -81,8 +55,7 @@ namespace
 namespace MCMBridge
 {
 	Result<LiveMCM> CreateLiveMCM(
-		RE::BSTSmartPointer<RE::BSScript::Object> a_script,
-		std::int32_t                              a_configIndex)
+		RE::BSTSmartPointer<RE::BSScript::Object> a_script)
 	{
 		if (!a_script) {
 			return std::unexpected(BridgeError{ BridgeErrorCode::kInvalidData, "MCM script object is unavailable" });
@@ -115,7 +88,6 @@ namespace MCMBridge
 			scriptName,
 			interopModName.value_or(descriptor.displayName));
 		descriptor.pageScopedState = IsBasedOn(a_script, "nl_mcm");
-		auto adapter = std::make_shared<SkyUIHostAdapter>(a_script, *interopModName);
-		return LiveMCM{ std::move(descriptor), a_configIndex, std::move(adapter), {}, {} };
+		return LiveMCM{ std::move(descriptor), {} };
 	}
 }

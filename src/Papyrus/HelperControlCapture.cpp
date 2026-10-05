@@ -3,7 +3,6 @@
 
 #include "MCMBridge/Core/HelperMenuCapture.h"
 #include "MCMBridge/Papyrus/NativeFacade.h"
-#include "MCMBridge/Plugin/BridgeController.h"
 
 #include <MinHook.h>
 #include <limits>
@@ -19,12 +18,6 @@ namespace
 	};
 	static_assert(sizeof(TextView) == 16);
 	static_assert(sizeof(Object) == 8);
-
-	bool Native(const Object& a_object)
-	{
-		return MCMBridge::NativeFacadeSession().TokenForOwner(reinterpret_cast<std::uintptr_t>(a_object.get())) ||
-		       MCMBridge::BridgeController::GetSingleton().IsNativeHost();
-	}
 
 	void Update(const Object& a_object, std::int32_t a_index, std::optional<TextView> a_text,
 		std::optional<float> a_value, std::optional<std::int32_t> a_flags)
@@ -76,45 +69,33 @@ namespace
 
 	struct Flags
 	{
-		static void thunk(const Object& a_object, std::int32_t a_option, std::int32_t a_flags, bool a_noUpdate)
+		static void thunk(const Object& a_object, std::int32_t a_option, std::int32_t a_flags, bool)
 		{
-			if (!Native(a_object))
-				func(a_object, a_option, a_flags, a_noUpdate);
-			else
-				Update(a_object, a_option < 0 ? -1 : a_option % 256, {}, {}, a_flags);
+			Update(a_object, a_option < 0 ? -1 : a_option % 256, {}, {}, a_flags);
 		}
 		static inline decltype(&thunk) func{};
 	};
 	struct Number
 	{
-		static void thunk(const Object& a_object, std::int32_t a_index, float a_value, bool a_noUpdate)
+		static void thunk(const Object& a_object, std::int32_t a_index, float a_value, bool)
 		{
-			if (!Native(a_object))
-				func(a_object, a_index, a_value, a_noUpdate);
-			else
-				Update(a_object, a_index, {}, a_value, {});
+			Update(a_object, a_index, {}, a_value, {});
 		}
 		static inline decltype(&thunk) func{};
 	};
 	struct Text
 	{
-		static void thunk(const Object& a_object, std::int32_t a_index, TextView a_text, bool a_noUpdate)
+		static void thunk(const Object& a_object, std::int32_t a_index, TextView a_text, bool)
 		{
-			if (!Native(a_object))
-				func(a_object, a_index, a_text, a_noUpdate);
-			else
-				Update(a_object, a_index, a_text, {}, {});
+			Update(a_object, a_index, a_text, {}, {});
 		}
 		static inline decltype(&thunk) func{};
 	};
 	struct Values
 	{
-		static void thunk(const Object& a_object, std::int32_t a_index, TextView a_text, float a_value, bool a_noUpdate)
+		static void thunk(const Object& a_object, std::int32_t a_index, TextView a_text, float a_value, bool)
 		{
-			if (!Native(a_object))
-				func(a_object, a_index, a_text, a_value, a_noUpdate);
-			else
-				Update(a_object, a_index, a_text, a_value, {});
+			Update(a_object, a_index, a_text, a_value, {});
 		}
 		static inline decltype(&thunk) func{};
 	};

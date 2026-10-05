@@ -117,7 +117,7 @@ namespace MCMBridge
 		if (ExternalOperationBlocked()) {
 			return;
 		}
-		if (refreshing || activeScan || activeWrite || activeHelp || activeHostedPage || activeHostedClose || IsClassicMCMActive()) {
+		if (refreshing || activeScan || activeWrite || activeHelp || activeHostedPage || activeHostedClose) {
 			const auto operationSession = session;
 			TaskScheduler::GetSingleton().After(hostedRefreshRetryDelay, [operationSession, a_token, a_pass] {
 				auto& controller = GetSingleton();
@@ -145,7 +145,7 @@ namespace MCMBridge
 			hostedPageIndex,
 			true,
 			HostedPageMode::kActivate,
-			[this] { return IsClassicMCMActive(); },
+			HostedPageOperation::BusyCheck{},
 			[this, operationSession, a_token, a_pass](Result<MCMPage> a_result) mutable {
 				FinishHostedAutoRefresh(operationSession, a_token, a_pass, std::move(a_result));
 			},
@@ -179,7 +179,7 @@ namespace MCMBridge
 			hostedPageIndex,
 			true,
 			HostedPageMode::kCommit,
-			[this] { return IsClassicMCMActive(); },
+			HostedPageOperation::BusyCheck{},
 			[this, operationSession, modID, pageID, command = std::move(a_command), confirmedValue = std::move(a_confirmedValue), navigation = std::move(a_navigation)](
 				Result<MCMPage> a_result) mutable {
 				FinishHostedCommit(
@@ -221,9 +221,7 @@ namespace MCMBridge
 					QueueHostedDrive();
 				return;
 			}
-			if (error.code == BridgeErrorCode::kBusy && originalMCMOpen.load()) {
-				ClearHostedState();
-			} else if (error.code == BridgeErrorCode::kTimedOut) {
+			if (error.code == BridgeErrorCode::kTimedOut) {
 				quarantined.insert(hostedDescriptor.stableID);
 				ClearHostedState();
 			} else if (configOpen) {
@@ -284,9 +282,7 @@ namespace MCMBridge
 					QueueHostedDrive();
 				return;
 			}
-			if (error.code == BridgeErrorCode::kBusy && originalMCMOpen.load()) {
-				ClearHostedState();
-			} else if (error.code == BridgeErrorCode::kTimedOut) {
+			if (error.code == BridgeErrorCode::kTimedOut) {
 				quarantined.insert(hostedDescriptor.stableID);
 				ClearHostedState();
 			} else if (!configOpen) {

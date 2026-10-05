@@ -4,7 +4,7 @@ namespace MCMBridge
 {
 	Result<HostDataInput> BridgeController::ReadHostData(MCMHostContext a_context)
 	{
-		if (!IsNativeHost() || !IsSessionReady())
+		if (!IsSessionReady())
 			return std::unexpected(BridgeError{ BridgeErrorCode::kUnavailable, "Native host is not ready" });
 		if (a_context && (directContext.id != a_context || directContext.ended || directContext.cancelled))
 			return std::unexpected(BridgeError{ BridgeErrorCode::kUnavailable, "Native host context is not current" });

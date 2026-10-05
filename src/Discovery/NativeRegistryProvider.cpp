@@ -163,7 +163,7 @@ namespace MCMBridge
 				if (!HasNativeFacade(object))
 					return std::unexpected(BridgeError{ BridgeErrorCode::kUnavailable,
 						"Registered MCM has a missing or incompatible native facade; registry migration was not applied" });
-				auto live = CreateLiveMCM(object, static_cast<std::int32_t>(index));
+				auto live = CreateLiveMCM(object);
 				if (!live) {
 					SKSE::log::warn("Native bootstrap skipped slot {}: {}", index, live.error().message);
 					continue;
@@ -196,7 +196,7 @@ namespace MCMBridge
 			return std::unexpected(BridgeError{ BridgeErrorCode::kUnavailable, "Native registry is inactive" });
 		if (!HasNativeFacade(a_menu))
 			return std::unexpected(BridgeError{ BridgeErrorCode::kUnavailable, "MCM registration requires a compatible native facade" });
-		auto live = CreateLiveMCM(a_menu, -1);
+		auto live = CreateLiveMCM(a_menu);
 		if (!live)
 			return std::unexpected(live.error());
 		const auto known = std::ranges::find_if(bindings, [&](const auto& a_binding) { return a_binding.object == a_menu; });
@@ -295,7 +295,7 @@ namespace MCMBridge
 			const auto  binding = byInstance.find(entry.instance);
 			if (binding == byInstance.end())
 				continue;
-			auto live = CreateLiveMCM(binding->second->object, static_cast<std::int32_t>(slot));
+			auto live = CreateLiveMCM(binding->second->object);
 			if (!live)
 				continue;
 			live->adapter = std::make_shared<NativeAdapter>(session, entry.identity, binding->second->object);

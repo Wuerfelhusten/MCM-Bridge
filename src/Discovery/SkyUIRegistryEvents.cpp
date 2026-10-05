@@ -40,11 +40,8 @@ namespace MCMBridge
 			return RE::BSEventNotifyControl::kContinue;
 		}
 		const std::string_view name = a_event->eventName.c_str();
-		if (name == readyEvent) {
-			BridgeController::GetSingleton().NotifyRegistryEvent(false);
-		} else if (name == resetEvent) {
-			BridgeController::GetSingleton().NotifyRegistryEvent(true);
-		}
+		if (name == readyEvent || name == resetEvent)
+			BridgeController::GetSingleton().NotifyRegistryEvent();
 		return RE::BSEventNotifyControl::kContinue;
 	}
 }

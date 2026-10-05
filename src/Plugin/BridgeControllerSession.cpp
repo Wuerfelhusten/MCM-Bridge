@@ -38,13 +38,7 @@ namespace MCMBridge
 		sessionReady.store(false);
 		refreshRequested.store(false);
 		fullRefreshRequested.store(false);
-		navigationRefreshRequested.store(false);
-		scanCache.reset();
 		writeRetryScheduled = false;
-		registryRetryScheduled = false;
-		waitingForMCM = false;
-		scanPausedForOriginalMCM = false;
-		originalMCMOpen.store(false);
 		WritePauseService::GetSingleton().Reset();
 		WriteNotifications::Reset();
 		if (activeWriteTiming) {
@@ -79,10 +73,9 @@ namespace MCMBridge
 			pendingHelp.clear();
 			resolvedHelp.clear();
 		}
-		registrySettler.Reset();
+		registryIDs.clear();
 		registry.Reset(true);
 		registryCheckPending.store(false);
-		registryResetRequested.store(false);
 		frontendInvalidationQueued.store(false);
 		refreshing = false;
 		snapshots.Reset(std::move(a_reason));
@@ -94,7 +87,6 @@ namespace MCMBridge
 		}
 		sessionReady.store(true);
 		const auto native = registry.PrepareNative(session);
-		ApplyNativeFrontendPolicy();
 		if (!native) {
 			const bool waiting = native.error().code == BridgeErrorCode::kBusy;
 			SKSE::log::info("Native host session admission: {}", native.error().message);

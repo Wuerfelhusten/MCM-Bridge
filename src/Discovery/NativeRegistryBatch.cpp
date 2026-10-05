@@ -35,7 +35,7 @@ namespace MCMBridge
 		for (const auto& menu : a_menus) {
 			if (!HasNativeFacadeContract(menu.object))
 				return std::unexpected(BridgeError{ BridgeErrorCode::kUnavailable, "Native batch requires compatible MCM facades" });
-			auto live = CreateLiveMCM(menu.object, -1);
+			auto live = CreateLiveMCM(menu.object);
 			if (!live)
 				return std::unexpected(live.error());
 			auto found = byObject.find(menu.object.get());

@@ -31,7 +31,7 @@ namespace MCMBridge
 	void BridgeController::PollNavigation()
 	{
 		if (!sessionReady.load() || refreshing || activeScan || activeWrite || activeHelp ||
-			activeHostedPage || activeHostedClose || ExternalOperationBlocked() || IsClassicMCMActive())
+			activeHostedPage || activeHostedClose || ExternalOperationBlocked())
 			return;
 
 		auto snapshot = *snapshots.Get();
@@ -45,14 +45,9 @@ namespace MCMBridge
 			});
 			if (live == liveEntries.end() || !live->adapter)
 				continue;
-			std::optional<std::vector<std::string>> names;
-			if (IsNativeHost()) {
-				names = hostedScript && hostedDescriptor.stableID == mod.stableID ?
-				            hostedScript->ReadNavigationPages() :
-				            live->adapter->ReadRegisteredPages();
-			} else if (const auto script = live->adapter->CreateSession()) {
-				names = script->ReadNavigationPages();
-			}
+			const auto  names = hostedScript && hostedDescriptor.stableID == mod.stableID ?
+			                        hostedScript->ReadNavigationPages() :
+			                        live->adapter->ReadRegisteredPages();
 			std::string selectedID;
 			std::string selectedName;
 			bool        hasSelection{};

@@ -28,9 +28,7 @@ namespace MCMBridge
 		if (!registry.IsAvailable() || !FrameworkApi::GetSingleton().IsAvailable()) {
 			return;
 		}
-		if (a_navigationOnly)
-			navigationRefreshRequested.store(true);
-		else
+		if (!a_navigationOnly)
 			fullRefreshRequested.store(true);
 		if (refreshRequested.exchange(true)) {
 			return;
@@ -44,11 +42,8 @@ namespace MCMBridge
 		}
 	}
 
-	void BridgeController::NotifyRegistryEvent(bool a_reset)
+	void BridgeController::NotifyRegistryEvent()
 	{
-		if (a_reset) {
-			registryResetRequested.store(true);
-		}
 		registryCheckPending.store(true);
 		QueueRegistryCheck();
 	}
@@ -66,10 +61,6 @@ namespace MCMBridge
 					return;
 				}
 				controller.registry.Reset();
-				if (controller.registryResetRequested.exchange(false) && !controller.registry.UsesNative()) {
-					controller.StartSession("MCM registry reset", controller.sessionReady.load());
-					return;
-				}
 				controller.RefreshOnGameThread(true);
 			});
 		} else {
@@ -94,58 +85,9 @@ namespace MCMBridge
 		return snapshots.Get();
 	}
 
-	bool BridgeController::IsSkyUIAvailable() const
+	bool BridgeController::IsRegistryAvailable() const
 	{
 		return registry.IsAvailable();
-	}
-
-	bool BridgeController::IsClassicMCMActive() const
-	{
-		if (IsNativeHost())
-			return false;
-		return originalMCMOpen.load() || registry.IsBusy();
-	}
-
-	void BridgeController::NotifyOriginalMCMState(bool a_open)
-	{
-		if (IsNativeHost())
-			return;
-		if (originalMCMOpen.exchange(a_open) == a_open)
-			return;
-		const auto operationSession = session;
-		if (auto* tasks = SKSE::GetTaskInterface()) {
-			tasks->AddTask([a_open, operationSession] {
-				GetSingleton().HandleOriginalMCMState(a_open, operationSession);
-			});
-		}
-	}
-
-	void BridgeController::HandleOriginalMCMState(bool a_open, std::uint64_t a_session)
-	{
-		if (a_session != session)
-			return;
-		if (a_open) {
-			if (activeScan) {
-				auto operation = activeScan;
-				operation->YieldToFrontend();
-			}
-			if (activeWrite) {
-				auto operation = activeWrite;
-				operation->YieldToFrontend();
-			}
-			if (activeHostedPage) {
-				auto operation = activeHostedPage;
-				operation->YieldToFrontend();
-			}
-			if (activeHelp) {
-				auto operation = activeHelp;
-				operation->Cancel();
-			}
-			return;
-		}
-		scanPausedForOriginalMCM = false;
-		refreshRequested.store(false);
-		RequestRefresh();
 	}
 
 	void BridgeController::ObserveMenuOptions(
@@ -156,17 +98,17 @@ namespace MCMBridge
 		menuResolver.ObserveInvokeStringArray(a_menuName, a_target, std::move(a_options));
 	}
 
-	void BridgeController::RefreshOnGameThread(bool a_stabilityCheck)
+	void BridgeController::RefreshOnGameThread(bool a_registryCheck)
 	{
 		if (!GameSessionEvents::CanUseGame()) {
 			if (!refreshRequested.exchange(true)) {
 				const auto operationSession = session;
-				TaskScheduler::GetSingleton().After(busyRetryDelay, [operationSession, a_stabilityCheck] {
+				TaskScheduler::GetSingleton().After(busyRetryDelay, [operationSession, a_registryCheck] {
 					auto& controller = GetSingleton();
 					if (controller.session != operationSession)
 						return;
 					controller.refreshRequested.store(false);
-					controller.RefreshOnGameThread(a_stabilityCheck);
+					controller.RefreshOnGameThread(a_registryCheck);
 				});
 			}
 			return;
@@ -176,7 +118,7 @@ namespace MCMBridge
 		if (!sessionReady.load())
 			return;
 		if (!AllowsRefresh()) {
-			if (a_stabilityCheck) {
+			if (a_registryCheck) {
 				registryCheckPending.store(true);
 			} else {
 				refreshRequested.store(true);
@@ -184,85 +126,46 @@ namespace MCMBridge
 			return;
 		}
 		if (refreshing || activeScan || activeWrite || activeHelp || activeHostedPage || activeHostedClose) {
-			if (a_stabilityCheck) {
+			if (a_registryCheck) {
 				registryCheckPending.store(true);
 			} else {
 				refreshRequested.store(true);
 			}
 			return;
 		}
-		if (originalMCMOpen.load()) {
-			scanPausedForOriginalMCM = true;
-			refreshRequested.store(true);
-			return;
-		}
-		if (registry.IsBusy()) {
-			TaskScheduler::GetSingleton().After(busyRetryDelay, [a_stabilityCheck] {
-				GetSingleton().RefreshOnGameThread(a_stabilityCheck);
-			});
-			return;
-		}
-		if (!a_stabilityCheck) {
-			registrySettler.Reset();
+		if (!a_registryCheck) {
+			registryIDs.clear();
 			registry.Reset();
 		}
 
 		auto entries = registry.ReadLive();
 		if (!entries) {
-			if (entries.error().code == BridgeErrorCode::kBusy) {
-				if (registryRetryScheduled)
-					return;
-				registryRetryScheduled = true;
-				const auto operationSession = session;
-				TaskScheduler::GetSingleton().After(std::chrono::milliseconds(100), [a_stabilityCheck, operationSession] {
-					auto& controller = GetSingleton();
-					if (controller.session != operationSession || !controller.registryRetryScheduled)
-						return;
-					controller.registryRetryScheduled = false;
-					controller.RefreshOnGameThread(a_stabilityCheck);
-				});
-				return;
-			}
-			registryRetryScheduled = false;
 			SKSE::log::warn("MCM registry discovery failed: {}", entries.error().message);
 			MCMSnapshot snapshot = *snapshots.Get();
 			snapshot.refreshing = false;
 			snapshot.diagnostics.push_back({ DiagnosticSeverity::kError, "discovery", entries.error().message });
 			snapshots.Publish(std::move(snapshot));
-			const auto settle = registrySettler.Observe({});
-			if (settle != RegistrySettleResult::kExpired) {
-				ScheduleStabilityCheck(session);
-			}
 			return;
 		}
 
-		registryRetryScheduled = false;
 		std::ranges::sort(*entries, {}, [](const auto& a_entry) { return a_entry.descriptor.stableID; });
-		std::map<std::string, std::string, std::less<>> providerAliases;
-		for (const auto& entry : *entries) {
-			if (!entry.registryDisplayName.empty())
-				providerAliases.emplace(entry.descriptor.stableID, entry.registryDisplayName);
-		}
-		BridgeSettingsService::GetSingleton().SetProviderAliases(std::move(providerAliases));
 		std::vector<std::string> ids;
 		ids.reserve(entries->size());
 		for (const auto& entry : *entries) {
 			ids.push_back(entry.descriptor.stableID);
 		}
 
-		const auto settle = registrySettler.Observe(ids);
-		if (a_stabilityCheck && settle != RegistrySettleResult::kChanged) {
+		const bool unchanged = ids == registryIDs;
+		registryIDs = std::move(ids);
+		if (a_registryCheck && unchanged) {
 			liveEntries = std::move(*entries);
 			FrameworkApi::GetSingleton().SynchronizeMCMs(snapshots.Get()->mods);
-			if (!IsNativeHost() && registrySettler.ShouldContinue()) {
-				ScheduleStabilityCheck(session);
-			}
 			ProcessWrites();
 			DriveHostedPage();
 			return;
 		}
 
-		if (IsNativeHost() && !fullRefreshRequested.load() && hostedScript && hostedReady &&
+		if (!fullRefreshRequested.load() && hostedScript && hostedReady &&
 			hostedScript->IsConfigOpen() && viewLoad.Ready(hostedDescriptor.stableID, hostedPageID)) {
 			const auto previous = std::ranges::find_if(liveEntries, [&](const auto& a_entry) {
 				return a_entry.descriptor.stableID == hostedDescriptor.stableID;

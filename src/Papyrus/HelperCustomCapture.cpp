@@ -4,7 +4,6 @@
 #include "MCMBridge/Core/HelperCustomContent.h"
 #include "MCMBridge/Core/HelperMenuCapture.h"
 #include "MCMBridge/Papyrus/NativeFacade.h"
-#include "MCMBridge/Plugin/BridgeController.h"
 
 #include <MinHook.h>
 
@@ -17,11 +16,8 @@ namespace
 		{
 			auto&      host = MCMBridge::NativeFacadeSession();
 			const auto token = host.TokenForOwner(reinterpret_cast<std::uintptr_t>(a_object.get()));
-			if (!token) {
-				if (!MCMBridge::BridgeController::GetSingleton().IsNativeHost())
-					func(a_content, a_object);
+			if (!token)
 				return;
-			}
 			try {
 				if (!a_content)
 					return;

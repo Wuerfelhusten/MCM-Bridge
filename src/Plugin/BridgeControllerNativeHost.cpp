@@ -2,14 +2,6 @@
 
 namespace MCMBridge
 {
-	void BridgeController::ApplyNativeFrontendPolicy()
-	{
-		nativeHost.store(registry.UsesNative());
-		if (!IsNativeHost())
-			return;
-		originalMCMOpen.store(false);
-	}
-
 	Result<bool> BridgeController::ResetNativeHost(const RE::BSTSmartPointer<RE::BSScript::Object>& a_manager)
 	{
 		if (!sessionReady.load() || !registry.Native().Owns(a_manager))
@@ -40,10 +32,9 @@ namespace MCMBridge
 		if (!version || !version->IsInt() || version->GetSInt() != 1)
 			return std::unexpected(BridgeError{ BridgeErrorCode::kUnavailable, "Native manager facade is missing or incompatible" });
 		auto activated = registry.ActivateNative(std::move(a_manager), session);
-		ApplyNativeFrontendPolicy();
 		if (!activated)
 			return std::unexpected(activated.error());
-		registrySettler.Reset();
+		registryIDs.clear();
 		RequestRefresh(true);
 		SKSE::log::info("Native MCM host registry activated for session {}", session);
 		return true;

@@ -3,11 +3,32 @@
 #include "MCMBridge/Papyrus/NativeFacade.h"
 #include "MCMBridge/Papyrus/NativeHostUI.h"
 
+namespace
+{
+	// Bootstrap only: registration remains owned by the native registry.
+	RE::BSTSmartPointer<RE::BSScript::Object> ReadManager()
+	{
+		auto* quest = RE::TESForm::LookupByEditorID<RE::TESQuest>("SKI_ConfigManagerInstance");
+		auto* vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
+		auto* policy = vm ? vm->GetObjectHandlePolicy() : nullptr;
+		if (!quest || !vm || !policy) {
+			return {};
+		}
+
+		const auto                                handle = policy->GetHandleForObject(quest->GetFormType(), quest);
+		RE::BSTSmartPointer<RE::BSScript::Object> manager;
+		if (handle == policy->EmptyHandle() || !vm->FindBoundObject(handle, "SKI_ConfigManager", manager)) {
+			return {};
+		}
+		return manager;
+	}
+}
+
 namespace MCMBridge
 {
 	Result<bool> AutomaticRegistryProvider::PrepareNative(std::uint64_t a_session)
 	{
-		auto manager = classic.ReadManager();
+		auto manager = ReadManager();
 		if (!manager)
 			return std::unexpected(BridgeError{ BridgeErrorCode::kBusy, "Waiting for the native manager instance" });
 		std::string reason;
@@ -56,14 +77,6 @@ namespace MCMBridge
 		if (a_invalidate)
 			native.Reset();
 		selectedName.clear();
-	}
-
-	Result<bool> AutomaticRegistryProvider::CheckCount(std::size_t a_expected)
-	{
-		const auto count = native.Count();
-		if (!count)
-			return std::unexpected(count.error());
-		return *count == a_expected;
 	}
 
 	Result<bool> AutomaticRegistryProvider::ActivateNative(RE::BSTSmartPointer<RE::BSScript::Object> a_manager, std::uint64_t a_session)

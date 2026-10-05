@@ -12,7 +12,7 @@ namespace MCMBridge
 	bool BridgeController::BorrowScriptContext(const RE::BSTSmartPointer<RE::BSScript::Object>& a_script, const std::string& a_mod, std::uint32_t a_stack)
 	{
 		if (directContext.id || refreshing || activeScan || activeWrite || activeHelp || activeHostedPage || activeHostedClose ||
-			!hostedScript || !hostedReady || hostedDescriptor.stableID != a_mod || !hostedScript->IsConfigOpen() || IsClassicMCMActive())
+			!hostedScript || !hostedReady || hostedDescriptor.stableID != a_mod || !hostedScript->IsConfigOpen())
 			return false;
 		const auto revision = CaptureScriptView(a_mod);
 		const auto ownerID = reinterpret_cast<std::uintptr_t>(a_script.get());
@@ -87,7 +87,7 @@ namespace MCMBridge
 			const auto operationSession = session;
 			activeHostedPage = std::make_shared<HostedPageOperation>(
 				hostedDescriptor, hostedScript, current->name, current->index, true, HostedPageMode::kReadCurrent,
-				[this] { return IsClassicMCMActive(); },
+				HostedPageOperation::BusyCheck{},
 				[this, operationSession, revision, modID, pageID](Result<MCMPage> a_result) {
 					FinishHostedPage(operationSession, revision, modID, pageID, std::move(a_result));
 				},

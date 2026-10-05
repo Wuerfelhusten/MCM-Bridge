@@ -77,9 +77,6 @@ namespace MCMBridge::MessageDialog
 				return true;
 			}
 		}
-		if (BridgeController::GetSingleton().IsClassicMCMActive()) {
-			return false;
-		}
 		Request request;
 		request.edit = a_arguments.size() > 2 && !a_arguments[2].empty() ? BridgeController::GetSingleton().UserEditID() : 0;
 		request.completion = std::move(a_completion);

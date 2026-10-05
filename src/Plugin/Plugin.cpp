@@ -127,8 +127,8 @@ namespace
 			if (!MCMBridge::JournalRedirect::Install()) {
 				SKSE::log::error("Could not install the Journal MCM redirect");
 			}
-			if (controller.IsSkyUIAvailable()) {
-				SKSE::log::info("SkyUI config manager is available");
+			if (controller.IsRegistryAvailable()) {
+				SKSE::log::info("Native MCM registry is available");
 				MCMBridge::SkyUIRegistryEvents::GetSingleton().Install();
 			} else {
 				SKSE::log::info("Native MCM registry is not bound at DataLoaded; Journal redirect is already installed");

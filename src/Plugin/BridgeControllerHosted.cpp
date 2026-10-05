@@ -101,7 +101,7 @@ namespace MCMBridge
 			page->index,
 			hostedScript->IsConfigOpen(),
 			HostedPageMode::kActivate,
-			[this] { return IsClassicMCMActive(); },
+			HostedPageOperation::BusyCheck{},
 			[this, operationSession, revision, modID, pageID](Result<MCMPage> a_result) mutable {
 				FinishHostedPage(operationSession, revision, std::move(modID), std::move(pageID), std::move(a_result));
 			},
@@ -162,12 +162,7 @@ namespace MCMBridge
 				requestChanged = requestedHostedModID != a_modID || requestedHostedPageID != a_pageID;
 			}
 			const auto resume = requestChanged || refreshRequested.load();
-			if (error.code == BridgeErrorCode::kBusy && originalMCMOpen.load()) {
-				ClearHostedState();
-				ProcessWrites();
-				if (resume)
-					DriveHostedPage();
-			} else if (error.code == BridgeErrorCode::kTimedOut) {
+			if (error.code == BridgeErrorCode::kTimedOut) {
 				quarantined.insert(a_modID);
 				ClearHostedState();
 				ProcessWrites();

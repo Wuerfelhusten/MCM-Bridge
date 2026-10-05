@@ -15,7 +15,7 @@ namespace MCMBridge
 		if (!requests.Claim(a_session, a_request))
 			return;
 		const auto reject = [&] { requests.Complete(a_session, a_request, -1); };
-		if (a_session != session || !IsSessionReady() || !IsNativeHost() || !a_script || !a_stack || scriptContext.closing) {
+		if (a_session != session || !IsSessionReady() || !a_script || !a_stack || scriptContext.closing) {
 			reject();
 			return;
 		}

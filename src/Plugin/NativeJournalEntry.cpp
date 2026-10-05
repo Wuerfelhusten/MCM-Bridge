@@ -1,7 +1,6 @@
 #include "MCMBridge/Plugin/NativeJournalEntry.h"
 
 #include "MCMBridge/Core/NativeJournalEntry.h"
-#include "MCMBridge/Plugin/BridgeController.h"
 
 namespace
 {
@@ -23,8 +22,7 @@ namespace
 				entry.GetMember(marker, &owned) && owned.IsBool() && owned.GetBool()) {
 				RE::GFxValue state;
 				RE::GFxValue disabled;
-				if (!MCMBridge::BridgeController::GetSingleton().IsNativeHost() ||
-					!a_params.thisPtr->GetMember("iCurrentState", &state) || !state.IsNumber() || state.GetNumber() != 0 ||
+				if (!a_params.thisPtr->GetMember("iCurrentState", &state) || !state.IsNumber() || state.GetNumber() != 0 ||
 					(entry.GetMember("disabled", &disabled) && disabled.IsBool() && disabled.GetBool()))
 					return;
 				a_params.movie->Invoke("_root.QuestJournalFader.Menu_mc._mcmBridgeNativeOpen", nullptr, nullptr, 0);
@@ -40,8 +38,6 @@ namespace MCMBridge
 {
 	bool AttachNativeJournalEntry(RE::GFxMovieView& a_movie, RE::GFxValue& a_root, const RE::GFxValue& a_open)
 	{
-		if (!BridgeController::GetSingleton().IsNativeHost())
-			return false;
 		RE::GFxValue page;
 		RE::GFxValue list;
 		RE::GFxValue entries;

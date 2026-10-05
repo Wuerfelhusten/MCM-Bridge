@@ -6,6 +6,5 @@
 namespace MCMBridge
 {
 	Result<LiveMCM> CreateLiveMCM(
-		RE::BSTSmartPointer<RE::BSScript::Object> a_script,
-		std::int32_t                              a_configIndex);
+		RE::BSTSmartPointer<RE::BSScript::Object> a_script);
 }
