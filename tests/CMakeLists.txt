@@ -60,7 +60,6 @@ add_executable(MCMBridgeTests
 	ScopedFrontendRedrawTests.cpp
 	DeadlineSchedulerTests.cpp
 	ActivePluginListTests.cpp
-	UnlockedRegistryTests.cpp
 	MCMHelperTests.cpp
 	MCMHelperVersionTests.cpp
 	WriteTimingTests.cpp

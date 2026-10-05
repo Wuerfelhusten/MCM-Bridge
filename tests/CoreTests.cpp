@@ -5,13 +5,11 @@
 #include "MCMBridge/Core/HostedPageMerge.h"
 #include "MCMBridge/Core/MenuOptionResolver.h"
 #include "MCMBridge/Core/OperationContext.h"
-#include "MCMBridge/Core/RegistrySelection.h"
 #include "MCMBridge/Core/RegistrySettler.h"
 #include "MCMBridge/Core/SkyUIFormat.h"
 #include "MCMBridge/Core/SkyUIRichText.h"
 #include "MCMBridge/Core/Slider.h"
 #include "MCMBridge/Core/StableId.h"
-#include "MCMBridge/Core/UnlockedVersion.h"
 #include "MCMBridge/Snapshot/SnapshotStore.h"
 #include "MCMBridge/Write/WriteValidator.h"
 
@@ -52,19 +50,6 @@ TEST_CASE("Slider normalization preserves aligned zero without hiding real off-g
 	CHECK(*NormalizeSliderValue(2.15F, 0.0F, 10.0F, 0.05F) == 2.15F);
 }
 
-TEST_CASE("Unlocked minimum version accepts supported patches and newer releases")
-{
-	using MCMBridge::SupportsUnlockedVersion;
-	CHECK_FALSE(SupportsUnlockedVersion({ 1, 0, 2 }));
-	CHECK_FALSE(SupportsUnlockedVersion({ 2, 0, 9 }));
-	CHECK_FALSE(SupportsUnlockedVersion({ 2, 1, 4 }));
-	CHECK(SupportsUnlockedVersion({ 2, 1, 5 }));
-	CHECK(SupportsUnlockedVersion({ 2, 1, 6 }));
-	CHECK(SupportsUnlockedVersion({ 2, 2, 0 }));
-	CHECK(SupportsUnlockedVersion({ 3, 0, 0 }));
-	CHECK_FALSE(SupportsUnlockedVersion({ 3, -1, 0 }));
-}
-
 TEST_CASE("Restore audit preserves value types and escapes profile text")
 {
 	using namespace MCMBridge;
@@ -97,12 +82,6 @@ namespace
 	private:
 		TimePoint now{};
 	};
-}
-
-TEST_CASE("Registry selection prefers MCM Unlocked when its marker forms are available")
-{
-	CHECK(MCMBridge::SelectRegistrySource(false) == MCMBridge::RegistrySource::kClassicSkyUI);
-	CHECK(MCMBridge::SelectRegistrySource(true) == MCMBridge::RegistrySource::kMCMUnlocked);
 }
 
 TEST_CASE("Stable IDs are deterministic and scoped")

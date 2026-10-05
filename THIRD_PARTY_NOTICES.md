@@ -54,7 +54,7 @@ Copyright (C) 2009-2017 Tsuda Kageyu; disassembler portions Copyright (c)
 
 ## MCM Unlocked
 
-The read-only Papyrus registry adapter and original-menu navigation were implemented against SkyrimSE_MCMUnlocked 2.1.6 at commit:
+Earlier registry integration used SkyrimSE_MCMUnlocked 2.1.6 at commit:
 
 `3ef5dd6a35dc18338040c6d652e759b232f99687`
 

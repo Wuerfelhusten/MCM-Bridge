@@ -248,3 +248,16 @@ foreach(REQUIRED "ResolveSession(a_frame, menu.c_str())" "IsActive(*token)" "ori
 		message(FATAL_ERROR "Missing scoped menu-state admission guard: ${REQUIRED}")
 	endif()
 endforeach()
+foreach(OBSOLETE
+	include/MCMBridge/Discovery/MCMUnlockedRegistryProvider.h
+	src/Discovery/MCMUnlockedRegistryProvider.cpp
+	include/MCMBridge/Discovery/UnlockedNativeRegistry.h
+	src/Discovery/UnlockedNativeRegistry.cpp
+	include/MCMBridge/Core/UnlockedRegistryQuery.h
+	src/Core/UnlockedRegistryQuery.cpp
+	include/MCMBridge/Core/RegistrySelection.h
+	include/MCMBridge/Core/UnlockedVersion.h)
+	if(EXISTS "${ROOT}/${OBSOLETE}")
+		message(FATAL_ERROR "Obsolete Unlocked registry adapter must not return: ${OBSOLETE}")
+	endif()
+endforeach()

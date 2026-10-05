@@ -307,3 +307,19 @@ TEST_CASE("Journal handoff validates the final menu state without retrying")
 	SECTION("Game unavailable") { CHECK_FALSE(handoff.Complete(request, 11, false, true)); }
 	CHECK_FALSE(handoff.Complete(request, 11, false, false));
 }
+
+TEST_CASE("Bridge aliases override provider aliases without changing original names")
+{
+	using namespace MCMBridge;
+	BridgeSettings    settings;
+	const std::string original = "Original";
+	settings.providerAliases["stable-id"] = "Provider alias";
+	CHECK(ResolveMCMAlias(settings, "stable-id", original) == "Provider alias");
+	SetMCMAlias(settings, "stable-id", "Bridge alias");
+	CHECK(ResolveMCMAlias(settings, "stable-id", original) == "Bridge alias");
+	SetMCMAlias(settings, "stable-id", "");
+	CHECK(ResolveMCMAlias(settings, "stable-id", original) == "Provider alias");
+	settings.providerAliases.clear();
+	CHECK(ResolveMCMAlias(settings, "stable-id", original) == "Original");
+	CHECK(original == "Original");
+}
