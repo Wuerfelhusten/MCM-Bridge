@@ -202,33 +202,15 @@ TEST_CASE("Journal closing preference persists independently of the pause prefer
 	}
 }
 
-TEST_CASE("Journal redirect is mandatory when the framework is available")
-{
-	using Action = MCMBridge::JournalRedirectAction;
-	for (const bool closeJournal : { false, true }) {
-		for (const bool available : { false, true }) {
-			for (const bool bypass : { false, true }) {
-				const MCMBridge::BridgeSettings settings{ true, closeJournal };
-				const auto                      expected = !available || bypass ? Action::kOpenOriginal :
-				                                                                  (closeJournal ? Action::kCloseJournal : Action::kKeepJournal);
-				CHECK(MCMBridge::ResolveJournalRedirect(settings, available, bypass) == expected);
-			}
-		}
-	}
-}
-
-TEST_CASE("Native host redirection never enters the original frontend")
+TEST_CASE("Journal redirection only exposes the native frontend")
 {
 	using Action = MCMBridge::JournalRedirectAction;
 	for (const bool close : { false, true }) {
 		for (const bool available : { false, true }) {
-			for (const bool bypass : { false, true }) {
-				const MCMBridge::BridgeSettings settings{ true, close };
-				const auto                      action = MCMBridge::ResolveJournalRedirect(settings, available, bypass, true);
-				CHECK(action == (!available ? Action::kUnavailable : close ? Action::kCloseJournal :
-																			 Action::kKeepJournal));
-				CHECK(action != Action::kOpenOriginal);
-			}
+			const MCMBridge::BridgeSettings settings{ true, close };
+			CHECK(MCMBridge::ResolveJournalRedirect(settings, available) ==
+				  (!available ? Action::kUnavailable : close ? Action::kCloseJournal :
+															   Action::kKeepJournal));
 		}
 	}
 }
@@ -244,7 +226,7 @@ TEST_CASE("Legacy redirect-disable value cannot disable the Journal redirect")
 	REQUIRE(settings);
 	CHECK_FALSE(settings->pauseDuringWrites);
 	CHECK(settings->closeJournalOnRedirect);
-	CHECK(MCMBridge::ResolveJournalRedirect(*settings, true, false, true) == MCMBridge::JournalRedirectAction::kCloseJournal);
+	CHECK(MCMBridge::ResolveJournalRedirect(*settings, true) == MCMBridge::JournalRedirectAction::kCloseJournal);
 	REQUIRE(MCMBridge::SaveBridgeSettings(fixture.Path(), *settings));
 	std::ifstream     file(fixture.Path());
 	const std::string content{ std::istreambuf_iterator<char>(file), {} };

@@ -2,7 +2,6 @@
 #include "MCMBridge/Core/CustomContentPolicy.h"
 
 #include "MCMBridge/Plugin/BridgeController.h"
-#include "MCMBridge/UI/IconButton.h"
 #include "MCMBridge/UI/PageRenderer.h"
 #include "SKSEMenuFramework.h"
 
@@ -69,20 +68,11 @@ namespace MCMBridge::MCMWindow
 			ImGuiMCP::TextUnformatted(page->displayName.c_str());
 		}
 		if (page->customContent) {
-			if (controller.IsNativeHost()) {
-				controller.ObserveCustomContent(*mod, *page);
-				ImGuiMCP::TextUnformatted(CustomContentPlaceholder(page->customContent->source).data());
-				ImGuiMCP::TextWrapped("The native MCM host does not support rendering this custom content yet. This does not mean its source file is missing.");
-				ImGuiMCP::TextWrapped("Source: %s", page->customContent->source.c_str());
-				return;
-			}
-			ImGuiMCP::TextWrapped("This page uses custom content provided by the original MCM.");
-			static const auto openIcon = FontAwesome::UnicodeToUtf8(0xf35d);
-			const auto        buttonID = std::format("original-{}:{}", mod->stableID, page->stableID);
-			const auto        open = IconButton::Render(openIcon, buttonID, "Open original");
-			if (open) {
-				controller.OpenOriginal(mod->stableID, page->stableID);
-			}
+			controller.ObserveCustomContent(*mod, *page);
+			ImGuiMCP::TextUnformatted(CustomContentPlaceholder(page->customContent->source).data());
+			ImGuiMCP::TextWrapped("The native MCM host does not support rendering this custom content yet. This does not mean its source file is missing.");
+			ImGuiMCP::TextWrapped("Source: %s", page->customContent->source.c_str());
+			return;
 		} else {
 			controller.ObserveHostedPage(mod->stableID, page->stableID);
 			if (page->controls.empty()) {

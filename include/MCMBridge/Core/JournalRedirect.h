@@ -8,7 +8,6 @@ namespace MCMBridge
 {
 	enum class JournalRedirectAction
 	{
-		kOpenOriginal,
 		kUnavailable,
 		kKeepJournal,
 		kCloseJournal
@@ -59,15 +58,10 @@ namespace MCMBridge
 	};
 
 	constexpr JournalRedirectAction ResolveJournalRedirect(
-		const BridgeSettings& a_settings, bool a_frameworkAvailable, bool a_bypass, bool a_nativeHost = false)
+		const BridgeSettings& a_settings, bool a_frameworkAvailable)
 	{
-		if (a_nativeHost) {
-			if (!a_frameworkAvailable)
-				return JournalRedirectAction::kUnavailable;
-			return a_settings.closeJournalOnRedirect ? JournalRedirectAction::kCloseJournal : JournalRedirectAction::kKeepJournal;
-		}
-		if (!a_frameworkAvailable || a_bypass)
-			return JournalRedirectAction::kOpenOriginal;
+		if (!a_frameworkAvailable)
+			return JournalRedirectAction::kUnavailable;
 		return a_settings.closeJournalOnRedirect ? JournalRedirectAction::kCloseJournal : JournalRedirectAction::kKeepJournal;
 	}
 }

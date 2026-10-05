@@ -6,7 +6,6 @@
 #include "MCMBridge/Plugin/TaskScheduler.h"
 #include "MCMBridge/Plugin/WritePauseService.h"
 #include "MCMBridge/UI/MessageDialog.h"
-#include "MCMBridge/UI/OriginalPageNavigator.h"
 #include "MCMBridge/UI/QuickOpenWindow.h"
 #include "MCMBridge/UI/WriteNotifications.h"
 #include "MCMBridge/Write/WriteTiming.h"
@@ -71,7 +70,6 @@ namespace MCMBridge
 		}
 		AbandonHostedSession(true);
 		writes.Clear();
-		OriginalPageNavigator::GetSingleton().Cancel();
 		MessageDialog::Cancel();
 		liveEntries.clear();
 		BridgeSettingsService::GetSingleton().SetProviderAliases({});

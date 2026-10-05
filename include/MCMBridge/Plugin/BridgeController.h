@@ -59,7 +59,6 @@ namespace MCMBridge
 		void                               RequestControlHelp(SettingIdentity a_identity, MCMValue a_value);
 		void                               RetryFailed();
 		void                               RetryHostedPage();
-		void                               OpenOriginal(std::string a_modID, std::string a_pageID);
 		void                               Submit(WriteCommand a_command) override;
 		std::shared_ptr<const MCMSnapshot> Snapshot() const;
 		bool                               IsSessionReady() const { return sessionReady.load(); }
@@ -207,7 +206,6 @@ namespace MCMBridge
 		bool                   HasHostedSession() const;
 		bool                   IsHostedTarget(const SettingIdentity& a_identity) const;
 		bool                   IsDesiredHostedTarget(const SettingIdentity& a_identity) const;
-		void                   OpenOriginalOnGameThread(std::string a_modID, std::string a_pageID, std::uint64_t a_session, std::uint32_t a_attempt);
 		std::optional<LiveMCM> FindLive(const SettingIdentity& a_identity) const;
 		MCMMod                 MergeHelper(MCMMod a_liveMod) const;
 		bool                   ExternalOperationBlocked() const;

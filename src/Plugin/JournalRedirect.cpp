@@ -2,7 +2,6 @@
 
 #include "MCMBridge/Core/JournalRedirect.h"
 #include "MCMBridge/Framework/FrameworkApi.h"
-#include "MCMBridge/Plugin/BridgeController.h"
 #include "MCMBridge/Plugin/BridgeSettingsService.h"
 #include "MCMBridge/Plugin/NativeJournalEntry.h"
 #include "MCMBridge/Plugin/TaskScheduler.h"
@@ -12,9 +11,8 @@
 namespace
 {
 	constexpr auto            journalRoot = "_root.QuestJournalFader.Menu_mc";
-	constexpr auto            originalMethod = "_mcmBridgeOriginalConfigPanelOpen";
+	constexpr auto            redirectMarker = "_mcmBridgeConfigRedirectInstalled";
 	std::atomic_uint64_t      journalGeneration{};
-	thread_local bool         bypass{};
 	bool                      installed{};
 	std::mutex                handoffMutex;
 	MCMBridge::JournalHandoff handoff;
@@ -54,13 +52,12 @@ namespace
 	public:
 		void Call(Params& a_params) override
 		{
-			const bool native = MCMBridge::BridgeController::GetSingleton().IsNativeHost();
 			try {
 				auto*      window = MCMBridge::FrameworkApi::GetSingleton().IsAvailable() ?
 				                        SKSEMenuFramework::GetMainWindow() :
 				                        nullptr;
 				const auto action = MCMBridge::ResolveJournalRedirect(
-					MCMBridge::BridgeSettingsService::GetSingleton().Get(), window != nullptr, bypass, native);
+					MCMBridge::BridgeSettingsService::GetSingleton().Get(), window != nullptr);
 				if (action == MCMBridge::JournalRedirectAction::kUnavailable) {
 					SKSE::log::error("Native MCM frontend unavailable; original MCM entry suppressed");
 					return;
@@ -84,12 +81,8 @@ namespace
 						const std::scoped_lock lock(handoffMutex);
 						handoff.Cancel();
 					}
-					if (native) {
-						window->IsOpen.store(true);
-						SKSE::log::warn("Journal close failed; opened native MCM frontend with Journal retained");
-						return;
-					}
-					SKSE::log::warn("Journal CloseMenu is unavailable; retaining the original MCM entry");
+					window->IsOpen.store(true);
+					SKSE::log::warn("Journal close failed; opened native MCM frontend with Journal retained");
 				} else if (action == MCMBridge::JournalRedirectAction::kKeepJournal) {
 					window->IsOpen.store(true);
 					SKSE::log::info("Redirected Journal MCM entry to Menu Framework; keeping Journal open");
@@ -100,11 +93,7 @@ namespace
 					const std::scoped_lock lock(handoffMutex);
 					handoff.Cancel();
 				}
-				SKSE::log::error("Journal MCM redirect failed; original menu {}", native ? "suppressed by native host" : "retained");
-			}
-			if (!native && a_params.thisPtr) {
-				MCMBridge::BridgeController::GetSingleton().NotifyOriginalMCMState(true);
-				a_params.thisPtr->Invoke(originalMethod, a_params.retVal, a_params.args, a_params.argCount);
+				SKSE::log::error("Journal MCM redirect failed; original menu suppressed");
 			}
 		}
 	};
@@ -115,7 +104,7 @@ namespace
 		RE::GFxValue original;
 		if (!a_movie.GetVariable(&root, journalRoot) || !root.IsObject())
 			return false;
-		if (root.GetMember(originalMethod, &original) && original.IsObject())
+		if (root.GetMember(redirectMarker, &original) && original.IsBool() && original.GetBool())
 			return true;
 		const bool   existing = root.GetMember("ConfigPanelOpen", &original) && original.IsObject();
 		RE::GFxValue wrapper;
@@ -124,12 +113,9 @@ namespace
 		handler->Release();
 		if (!existing)
 			return wrapper.IsObject() && MCMBridge::AttachNativeJournalEntry(a_movie, root, wrapper);
-		if (!wrapper.IsObject() || !root.SetMember(originalMethod, original))
+		if (!wrapper.IsObject() || !root.SetMember("ConfigPanelOpen", wrapper))
 			return false;
-		if (!root.SetMember("ConfigPanelOpen", wrapper)) {
-			root.SetMember(originalMethod, RE::GFxValue());
-			return false;
-		}
+		root.SetMember(redirectMarker, RE::GFxValue(true));
 		SKSE::log::debug("Attached Journal MCM redirect");
 		return true;
 	}
@@ -159,9 +145,6 @@ namespace
 			if (!a_event)
 				return RE::BSEventNotifyControl::kContinue;
 			if (a_event->menuName == RE::JournalMenu::MENU_NAME) {
-				if (!a_event->opening) {
-					MCMBridge::BridgeController::GetSingleton().NotifyOriginalMCMState(false);
-				}
 				const auto    generation = ++journalGeneration;
 				std::uint64_t request{};
 				{
@@ -206,15 +189,4 @@ namespace MCMBridge::JournalRedirect
 		return true;
 	}
 
-	bool OpenOriginalPanel(RE::GFxMovie& a_movie)
-	{
-		if (BridgeController::GetSingleton().IsNativeHost())
-			return false;
-		struct BypassScope
-		{
-			bool previous{ std::exchange(bypass, true) };
-			~BypassScope() { bypass = previous; }
-		} scope;
-		return a_movie.Invoke("_root.QuestJournalFader.Menu_mc.ConfigPanelOpen", nullptr, nullptr, 0);
-	}
 }
