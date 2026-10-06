@@ -40,6 +40,7 @@ if(MCM_BRIDGE_SKYUI_SCRIPT_SOURCE)
 		-P "${CMAKE_CURRENT_SOURCE_DIR}/CheckNativeFacade.cmake")
 endif()
 add_executable(MCMBridgeTests
+	FrameworkRequirementsTests.cpp
 	MessageWaitTests.cpp
 	FacadeCallStateTests.cpp
 	ExternalOperationStateTests.cpp

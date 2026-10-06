@@ -1,5 +1,6 @@
 #include "MCMBridge/Framework/FrameworkApi.h"
 
+#include "MCMBridge/Framework/FrameworkRequirements.h"
 #include "MCMBridge/Framework/MCMEntryRegistry.h"
 #include "MCMBridge/Plugin/BridgeController.h"
 #include "MCMBridge/UI/BrowserWindow.h"
@@ -12,8 +13,6 @@
 
 namespace
 {
-	constexpr float                                  minimumFrameworkVersion = 3.8F;
-	constexpr std::uint32_t                          minimumFrameworkApiVersion = 1U;
 	std::unique_ptr<SKSEMenuFramework::Model::Event> lifecycleRegistration;
 
 	void __stdcall OnFrameworkEvent(SKSEMenuFramework::Model::EventType a_eventType)
@@ -54,22 +53,23 @@ namespace MCMBridge
 		if (registered) {
 			return true;
 		}
-		if (!GetModuleHandleW(L"SKSEMenuFramework")) {
-			SKSE::log::error("SKSE Menu Framework is not loaded");
+		const auto module = GetModuleHandleW(L"SKSEMenuFramework");
+		if (!module) {
+			SKSE::log::error("SKSE Menu Framework is not loaded; install release {} or newer", FrameworkRequirements::minimumRelease);
 			return false;
 		}
 
-		version = SKSEMenuFramework::GetMenuFrameworkVersion();
-		if (version < minimumFrameworkVersion) {
-			SKSE::log::error("SKSE Menu Framework {} is older than required version {}", version, minimumFrameworkVersion);
+		if (const auto missing = FrameworkRequirements::FindMissingExport([module](const char* a_name) { return GetProcAddress(module, a_name) != nullptr; })) {
+			SKSE::log::error("SKSE Menu Framework is missing required export {}; install release {} or newer from Nexus Mods", missing, FrameworkRequirements::minimumRelease);
 			return false;
 		}
 		const auto apiVersion = SKSEMenuFramework::GetMenuFrameworkAPIVersion();
-		if (apiVersion < minimumFrameworkApiVersion) {
+		if (!FrameworkRequirements::SupportsApi(apiVersion)) {
 			SKSE::log::error(
-				"SKSE Menu Framework API {} is older than required API {}", apiVersion, minimumFrameworkApiVersion);
+				"SKSE Menu Framework API {} is unsupported; required API {} (release {} or newer)", apiVersion, FrameworkRequirements::minimumApiVersion, FrameworkRequirements::minimumRelease);
 			return false;
 		}
+		version = SKSEMenuFramework::GetMenuFrameworkVersion();
 
 		SKSEMenuFramework::SetSection("MCM Bridge");
 		SKSEMenuFramework::AddSectionItem("Settings", SettingsWindow::Render);
@@ -88,7 +88,7 @@ namespace MCMBridge
 			return false;
 		}
 		registered = true;
-		SKSE::log::info("Registered MCM Bridge with SKSE Menu Framework {}", version);
+		SKSE::log::info("Registered MCM Bridge with SKSE Menu Framework API {}; legacy version report {} is not the release version (required release {} or newer)", apiVersion, version, FrameworkRequirements::minimumRelease);
 		return true;
 	}
 

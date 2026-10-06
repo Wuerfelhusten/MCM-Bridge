@@ -7,7 +7,7 @@ The project owner has repeatedly tested their SkyUI installation and MCMMemory i
 ## Requirements
 
 - Skyrim SE or AE, matching SKSE, and Address Library for SKSE Plugins
-- SKSE Menu Framework 3.8 or newer, installed separately
+- SKSE Menu Framework 3.18 or newer, installed separately
 - SkyUI for the current SkyUI add-on package
 - MCM Helper, required even if your individual MCMs do not use it
 - Current [Microsoft Visual C++ Redistributable (x64)](https://aka.ms/vc14/vc_redist.x64.exe)
