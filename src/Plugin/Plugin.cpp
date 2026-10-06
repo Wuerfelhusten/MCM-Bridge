@@ -172,7 +172,7 @@ namespace MCMBridge::Plugin
 			return false;
 		}
 		if (!FrameworkApi::GetSingleton().BindAndRegister()) {
-			SKSE::log::critical("Could not bind Menu Framework; MCM Bridge remains inactive");
+			SKSE::log::critical("Could not bind a compatible MCM frontend; MCM Bridge remains inactive");
 			return false;
 		}
 		return true;

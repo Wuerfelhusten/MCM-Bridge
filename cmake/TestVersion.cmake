@@ -1,0 +1,8 @@
+set(MCM_BRIDGE_TEST_RC "0" CACHE STRING "Test package candidate number; zero builds the stable version")
+if(NOT MCM_BRIDGE_TEST_RC MATCHES "^(0|[1-9][0-9]*)$" OR MCM_BRIDGE_TEST_RC GREATER 65535)
+	message(FATAL_ERROR "MCM_BRIDGE_TEST_RC must be an integer from 0 through 65535")
+endif()
+set(MCM_BRIDGE_PACKAGE_VERSION "${PROJECT_VERSION}")
+if(MCM_BRIDGE_TEST_RC GREATER 0)
+	string(APPEND MCM_BRIDGE_PACKAGE_VERSION "rc${MCM_BRIDGE_TEST_RC}")
+endif()

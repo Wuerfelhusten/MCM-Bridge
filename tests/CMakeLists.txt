@@ -40,6 +40,7 @@ if(MCM_BRIDGE_SKYUI_SCRIPT_SOURCE)
 		-P "${CMAKE_CURRENT_SOURCE_DIR}/CheckNativeFacade.cmake")
 endif()
 add_executable(MCMBridgeTests
+	FrontendSelectionTests.cpp
 	FrameworkRequirementsTests.cpp
 	MessageWaitTests.cpp
 	FacadeCallStateTests.cpp
@@ -109,17 +110,38 @@ target_include_directories(MCMBridgeUITests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}
 target_link_libraries(MCMBridgeUITests PRIVATE MCMBridgeCore Catch2::Catch2WithMain)
 set_property(TARGET MCMBridgeUITests PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
 
+add_executable(MCMBridgeFlickUITests
+	FlickWidgetRoutingTests.cpp
+	FlickRichTextTests.cpp
+	"${CMAKE_SOURCE_DIR}/src/UI/FrontendUI.cpp"
+	"${CMAKE_SOURCE_DIR}/src/UI/FrontendWidgets.cpp"
+	"${CMAKE_SOURCE_DIR}/src/UI/IconButton.cpp"
+	"${CMAKE_SOURCE_DIR}/src/UI/FlickWidgetDecoration.cpp"
+	"${CMAKE_SOURCE_DIR}/src/UI/FlickRichTextRenderer.cpp"
+)
+target_compile_features(MCMBridgeFlickUITests PRIVATE cxx_std_23)
+target_precompile_headers(MCMBridgeFlickUITests PRIVATE "${CMAKE_SOURCE_DIR}/include/PCH.h")
+target_compile_definitions(MCMBridgeFlickUITests PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
+target_include_directories(MCMBridgeFlickUITests PRIVATE "${CMAKE_SOURCE_DIR}/include" "${CMAKE_BINARY_DIR}/cmake")
+target_include_directories(MCMBridgeFlickUITests SYSTEM PRIVATE "${CMAKE_SOURCE_DIR}/external/SKSEMenuFramework" "${flick_api_SOURCE_DIR}" "${flick_imgui_SOURCE_DIR}")
+target_link_libraries(MCMBridgeFlickUITests PRIVATE CommonLibSSE::CommonLibSSE MCMBridgeCore Catch2::Catch2WithMain)
+set_property(TARGET MCMBridgeFlickUITests PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
+
 if(MSVC)
 	# Match the plugin's full LTCG link after internal model layout changes.
-	foreach(TEST_TARGET MCMBridgeTests MCMBridgeUITests MCMBridgeConfigCheck)
+	foreach(TEST_TARGET MCMBridgeTests MCMBridgeUITests MCMBridgeFlickUITests MCMBridgeConfigCheck)
 		target_link_options(${TEST_TARGET} PRIVATE "$<$<CONFIG:Release>:/LTCG;/INCREMENTAL:NO>")
 	endforeach()
 	target_compile_options(MCMBridgeTests PRIVATE /permissive- /W4 /WX /utf-8)
 	target_compile_options(MCMBridgeConfigCheck PRIVATE /permissive- /W4 /WX /utf-8)
 	target_compile_options(MCMBridgeUITests PRIVATE /permissive- /W4 /WX /utf-8)
+	target_compile_options(MCMBridgeFlickUITests PRIVATE /permissive- /W4 /WX /external:W0 /utf-8)
 endif()
 
 include(Catch)
+add_test(NAME TestPackageVersion
+	COMMAND "${CMAKE_COMMAND}" "-DROOT=${CMAKE_SOURCE_DIR}" -P "${CMAKE_CURRENT_SOURCE_DIR}/TestVersionTests.cmake"
+)
 add_test(NAME RepositoryScripts
 	COMMAND "${CMAKE_COMMAND}" "-DROOT=${CMAKE_SOURCE_DIR}" "-DOUTPUT=${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>"
 		-P "${CMAKE_CURRENT_SOURCE_DIR}/RepositoryScriptsTests.cmake"
@@ -142,6 +164,7 @@ add_test(
 )
 catch_discover_tests(MCMBridgeTests DISCOVERY_MODE PRE_TEST)
 catch_discover_tests(MCMBridgeUITests DISCOVERY_MODE PRE_TEST)
+catch_discover_tests(MCMBridgeFlickUITests DISCOVERY_MODE PRE_TEST)
 
 add_test(
 	NAME TextPolicy

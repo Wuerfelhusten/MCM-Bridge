@@ -24,6 +24,24 @@ The discovery, Papyrus continuation, and headless MCM sequencing design was info
 
 MCMMemory is licensed under GPL-3.0. MCM Bridge uses independently structured implementations and preserves attribution for adapted patterns.
 
+## FLICK
+
+The FLICK API headers are fetched from Fuzzlesz/FUCK_API at commit
+`a9ce5d17ebe095e3f11e2d9acd34534fd3d066c9`. FLICK is GPL-3.0-licensed.
+Its matching ImGui header is fetched from powerof3/imgui at commit
+`fbbe3efd107e960f864d2944fdf280b465110bad` (MIT). Drawing uses FLICK's function
+table; no second ImGui implementation or FLICK binary is bundled.
+
+## Reset icon
+
+FLICK renders the same Font Awesome Free Solid U+F0E2 outline used by SKSE
+Menu Framework, rasterized from its font glyph rather than redrawn by hand.
+Copyright Font Awesome / Fonticons, Inc. The outline is SIL OFL 1.1-licensed;
+see [the full license](licenses/FontAwesome.txt). The license is also embedded
+in the DLL's `ResetIconLicense` resource. No font atlas or font file is shared
+between the frontends. Only the derived reset texture is added to the runtime
+package; FLICK loads and owns its image resource.
+
 ## MCM Helper
 
 MCM Helper behavior and configuration formats were studied at commit:

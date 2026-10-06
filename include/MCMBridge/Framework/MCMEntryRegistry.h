@@ -16,6 +16,7 @@ namespace MCMBridge
 
 		void Synchronize(std::span<const MCMMod> a_mods);
 		void Render(std::size_t a_slot) const;
+		void Deactivate();
 
 	private:
 		MCMEntryRegistry();

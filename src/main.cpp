@@ -31,6 +31,6 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 	spdlog::flush_on(spdlog::level::warn);
 #endif
 
-	SKSE::log::info("MCM Bridge loaded for game version {}", a_skse->RuntimeVersion());
+	SKSE::log::info("MCM Bridge {} loaded for game version {}", Plugin::PACKAGE_VERSION, a_skse->RuntimeVersion());
 	return MCMBridge::Plugin::Initialize(a_skse->RuntimeVersion().pack());
 }

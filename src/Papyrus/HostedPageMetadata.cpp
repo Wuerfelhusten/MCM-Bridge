@@ -53,7 +53,9 @@ namespace MCMBridge
 				case MCMControlType::kMenu:
 					{
 						auto metadata = self->script->ReadMenuMetadata(option);
-						auto options = self->menuResolver->Resolve(target.identity);
+						// Native dialogs already own their options. Only buffer-only
+						// adapters need the separate UI capture.
+						auto options = metadata && !metadata->options.empty() ? metadata : self->menuResolver->Resolve(target.identity);
 						if (metadata && options) {
 							options->selectedIndex = metadata->selectedIndex;
 							options->defaultIndex = metadata->defaultIndex;
@@ -61,6 +63,7 @@ namespace MCMBridge
 							target.defaultValue = options->defaultIndex;
 							target.menu = std::move(*options);
 							target.writeCapability = target.disabled ? WriteCapability::kDisabled : WriteCapability::kWritable;
+							self->menuResolver->CancelCapture();
 						} else {
 							self->menuResolver->CancelCapture();
 							if (!target.disabled)

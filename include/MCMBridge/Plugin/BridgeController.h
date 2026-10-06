@@ -87,6 +87,7 @@ namespace MCMBridge
 		MCMHostResult CancelExternalOperation(std::string_view a_owner);
 
 		void ResumeGameUI();
+		bool TryFrontendHandoff(std::function<void()> a_completion);
 
 	private:
 		void RetireScriptContext(bool a_timeout = false, bool a_resume = true);

@@ -78,11 +78,12 @@ namespace MCMBridge
 		registryCheckPending.store(false);
 		frontendInvalidationQueued.store(false);
 		refreshing = false;
+		FrameworkApi::GetSingleton().InvalidateHandoff();
 		snapshots.Reset(std::move(a_reason));
 		if (!a_discover)
 			return;
 		if (!FrameworkApi::GetSingleton().IsAvailable()) {
-			SKSE::log::error("MCM Bridge is inert because SKSE Menu Framework is unavailable");
+			SKSE::log::error("MCM Bridge is inert because no compatible frontend is available");
 			return;
 		}
 		sessionReady.store(true);

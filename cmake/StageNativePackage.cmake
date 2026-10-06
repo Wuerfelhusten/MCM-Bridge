@@ -28,9 +28,9 @@ function(REQUIRE_BUILD_PATH PATH)
 endfunction()
 REQUIRE_BUILD_PATH("${OUTPUT}")
 
-set(SOURCES "${BRIDGE}" "${ROOT}/config/MCMBridge.ini"
+set(SOURCES "${BRIDGE}" "${ROOT}/config/MCMBridge.ini" "${ROOT}/assets/reset.png"
 	"${ROOT}/LICENSE" "${ROOT}/THIRD_PARTY_NOTICES.md" "${ROOT}/licenses/MinHook.txt")
-set(DESTINATIONS "SKSE/Plugins/MCMBridge.dll" "SKSE/Plugins/MCMBridge.ini"
+set(DESTINATIONS "SKSE/Plugins/MCMBridge.dll" "SKSE/Plugins/MCMBridge.ini" "Interface/MCMBridge/reset.png"
 	"licenses/MCMBridge/LICENSE" "licenses/MCMBridge/THIRD_PARTY_NOTICES.md" "licenses/MCMBridge/MinHook.txt")
 set(SCRIPTS MCMBridgeNative MCMBridgeRegistry SKI_ConfigBase SKI_ConfigManager)
 if(VARIANT STREQUAL "standalone")

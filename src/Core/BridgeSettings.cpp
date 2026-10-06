@@ -2,6 +2,7 @@
 #include "MCMBridge/Core/MCMOrganization.h"
 
 #include <SimpleIni.h>
+#include <algorithm>
 
 namespace
 {
@@ -54,12 +55,17 @@ namespace MCMBridge
 		BridgeSettings settings{
 			.pauseDuringWrites = ini.GetBoolValue("General", "PauseDuringWrites", true),
 			.closeJournalOnRedirect = ini.GetBoolValue("General", "CloseJournalOnRedirect", true),
+			.preferFlick = ini.GetBoolValue("General", "PreferFLICK", true),
 			.groupMCMs = ini.GetBoolValue("General", "GroupMCMs", false),
 			.alphabeticMCMs = ini.GetBoolValue("General", "AlphabeticMCMs", false),
 			.mcmRangeEnds = ini.GetValue("General", "MCMRangeEnds", "CGLRZ")
 		};
 		if (!ValidMCMRanges(settings.mcmRangeEnds))
 			settings.mcmRangeEnds = "CGLRZ";
+		const auto selector = ini.GetLongValue("FLICK", "PageSelector", 1);
+		settings.flickPageSelector = selector >= 0 && selector <= 2 ? static_cast<FlickPageSelector>(selector) : FlickPageSelector::kLeft;
+		settings.flickPageRows = static_cast<int>(std::clamp(ini.GetLongValue("FLICK", "PageRows", 3), 1L, 6L));
+		settings.flickPageWidth = static_cast<int>(std::clamp(ini.GetLongValue("FLICK", "PageWidth", 25), 15L, 45L));
 		CSimpleIniA::TNamesDepend keys;
 		ini.GetAllKeys("Aliases", keys);
 		for (const auto& key : keys) {
@@ -86,9 +92,13 @@ namespace MCMBridge
 			std::filesystem::create_directories(a_path.parent_path(), error);
 		if (error || ini.SetBoolValue("General", "PauseDuringWrites", a_settings.pauseDuringWrites) < 0 ||
 			ini.SetBoolValue("General", "CloseJournalOnRedirect", a_settings.closeJournalOnRedirect) < 0 ||
+			ini.SetBoolValue("General", "PreferFLICK", a_settings.preferFlick) < 0 ||
 			ini.SetBoolValue("General", "GroupMCMs", a_settings.groupMCMs) < 0 ||
 			ini.SetBoolValue("General", "AlphabeticMCMs", a_settings.alphabeticMCMs) < 0 ||
 			ini.SetValue("General", "MCMRangeEnds", a_settings.mcmRangeEnds.c_str()) < 0 ||
+			ini.SetLongValue("FLICK", "PageSelector", static_cast<long>(a_settings.flickPageSelector)) < 0 ||
+			ini.SetLongValue("FLICK", "PageRows", a_settings.flickPageRows) < 0 ||
+			ini.SetLongValue("FLICK", "PageWidth", a_settings.flickPageWidth) < 0 ||
 			ini.SaveFile(a_path.string().c_str()) < 0) {
 			return std::unexpected(BridgeError{ BridgeErrorCode::kIoError, "Could not save MCMBridge.ini" });
 		}

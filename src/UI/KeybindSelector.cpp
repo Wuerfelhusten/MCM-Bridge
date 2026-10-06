@@ -1,9 +1,12 @@
 #include "MCMBridge/UI/KeybindSelector.h"
+#include "MCMBridge/Framework/FrameworkApi.h"
+#include "MCMBridge/Framework/FrontendWindow.h"
 
+#include "MCMBridge/UI/ControlRowRenderer.h"
+#include "MCMBridge/UI/FrontendUI.h"
 #include "MCMBridge/UI/IconButton.h"
 #include "MCMBridge/UI/KeymapCatalog.h"
 #include "MCMBridge/UI/RichTextRenderer.h"
-#include "SKSEMenuFramework.h"
 
 namespace
 {
@@ -83,6 +86,8 @@ namespace
 			if (installed) {
 				return true;
 			}
+			if (!MCMBridge::FrameworkApi::GetSingleton().HasMenuFramework())
+				return true;
 			inputRegistration.reset(SKSEMenuFramework::AddInputEvent(OnInput));
 			eventRegistration.reset(SKSEMenuFramework::AddEvent(OnFrameworkEvent, 0.0F));
 			installed = inputRegistration && eventRegistration;
@@ -139,12 +144,44 @@ namespace
 				candidate.reset();
 			}
 		}
+		bool Any()
+		{
+			const std::scoped_lock lock(mutex);
+			return !activeID.empty();
+		}
+		void Frame(bool a_begin)
+		{
+			const std::scoped_lock lock(mutex);
+			if (a_begin)
+				renderedThisFrame = false;
+			else if (!renderedThisFrame)
+				Reset();
+		}
+		void Clear()
+		{
+			const std::scoped_lock lock(mutex);
+			Reset();
+		}
+		bool Input(const void* a_events)
+		{
+			if (!a_events || !Any())
+				return false;
+			// FLICK passes the head pointer of Skyrim's linked input-event list.
+			for (auto event = *static_cast<const RE::InputEvent* const*>(a_events); event; event = event->next) {
+				const auto button = event->AsButtonEvent();
+				if (button && button->IsDown())
+					Capture(*button);
+			}
+			return true;
+		}
 
 	private:
 		static bool __stdcall OnInput(RE::InputEvent* a_event)
 		{
+			if (!MCMBridge::FrameworkApi::GetSingleton().CanRender(MCMBridge::Frontend::kMenuFramework))
+				return false;
 			auto* mainWindow = SKSEMenuFramework::GetMainWindow();
-			if (!mainWindow || !mainWindow->IsOpen.load() || !a_event) {
+			if (!a_event || ((!mainWindow || !mainWindow->IsOpen.load()) && !MCMBridge::FrontendWindow::PrimaryOpen())) {
 				return false;
 			}
 			const auto* button = a_event->AsButtonEvent();
@@ -156,6 +193,8 @@ namespace
 
 		static void __stdcall OnFrameworkEvent(SKSEMenuFramework::Model::EventType a_eventType)
 		{
+			if (!MCMBridge::FrameworkApi::GetSingleton().CanRender(MCMBridge::Frontend::kMenuFramework))
+				return;
 			auto&            state = GetSingleton();
 			std::scoped_lock lock(state.mutex);
 			if (a_eventType == SKSEMenuFramework::Model::kBeforeRender) {
@@ -194,9 +233,9 @@ namespace
 
 	void AlignSelector(float a_width)
 	{
-		const auto cursor = ImGuiMCP::GetCursorPosX();
-		const auto available = ImGuiMCP::GetContentRegionAvail().x;
-		ImGuiMCP::SetCursorPosX(cursor + (std::max)(0.0F, available - a_width));
+		const auto cursor = BridgeUI::GetCursorPosX();
+		const auto available = BridgeUI::GetContentRegionAvail().x;
+		BridgeUI::SetCursorPosX(cursor + (std::max)(0.0F, available - a_width));
 	}
 }
 
@@ -206,6 +245,11 @@ namespace MCMBridge::KeybindSelector
 	{
 		return CaptureState::GetSingleton().Install();
 	}
+	bool HandleFlickInput(const void* a_events) { return CaptureState::GetSingleton().Input(a_events); }
+	bool IsCapturingAny() { return CaptureState::GetSingleton().Any(); }
+	void BeginFrame() { CaptureState::GetSingleton().Frame(true); }
+	void EndFrame() { CaptureState::GetSingleton().Frame(false); }
+	void CancelAll() { CaptureState::GetSingleton().Clear(); }
 
 	std::optional<Edit> Render(
 		std::string_view a_stableID,
@@ -220,53 +264,66 @@ namespace MCMBridge::KeybindSelector
 		}
 		const auto wasCapturing = capture.IsCapturing(a_stableID);
 		const auto display = wasCapturing ? "Press a key or button..." : KeymapCatalog::Name(a_currentValue);
+		const auto rowEnd = BridgeUI::GetCursorPosX() + BridgeUI::GetContentRegionAvail().x;
 
-		if (!a_label.empty()) {
+		if (renderFrontend == Frontend::kFlick) {
+			ControlRowRenderer::BeginRow(a_label, (std::max)(BridgeUI::GetFontSize() * 10, BridgeUI::GetContentRegionAvail().x * 0.48F), 0);
+		} else if (!a_label.empty()) {
 			RichTextRenderer::Render(a_label);
-			ImGuiMCP::SameLine();
+			BridgeUI::SameLine();
 		}
 
 		constexpr float cancelWidth = 62.0F;
-		const auto      spacing = ImGuiMCP::GetStyle()->ItemSpacing.x;
-		const auto      clearWidth = ImGuiMCP::GetFrameHeight();
-		const auto      resetWidth = ImGuiMCP::GetFrameHeight();
+		const auto      spacing = BridgeUI::GetStyle()->ItemSpacing.x;
+		const auto      clearWidth = BridgeUI::GetFrameHeight();
+		const auto      resetWidth = BridgeUI::GetFrameHeight();
 		const auto      actionWidth = (a_allowUnmap ? clearWidth : 0.0F) + resetWidth + (wasCapturing ? cancelWidth : 0.0F);
 		const auto      actionCount = 1.0F + (a_allowUnmap ? 1.0F : 0.0F) + (wasCapturing ? 1.0F : 0.0F);
-		const auto      available = (std::max)(0.0F, ImGuiMCP::GetContentRegionAvail().x - spacing);
+		const auto      available = (std::max)(0.0F, BridgeUI::GetContentRegionAvail().x - (renderFrontend == Frontend::kFlick ? 0.0F : spacing));
 		const auto      desiredWidth = (std::max)(280.0F, available * 0.48F);
-		const auto      rowWidth = (std::min)(available, desiredWidth);
+		const auto      rowWidth = renderFrontend == Frontend::kFlick ? available : (std::min)(available, desiredWidth);
 		AlignSelector(rowWidth);
 		const auto selectorWidth = (std::max)(1.0F, rowWidth - actionWidth - spacing * actionCount);
 		const auto selectorID = std::format("{}##capture-{}", display, a_stableID);
-		const auto selectorClicked = ImGuiMCP::Button(selectorID.c_str(), { selectorWidth, 0.0F });
-		const auto selectorHovered = ImGuiMCP::IsItemHovered();
+		const auto selectorClicked = BridgeUI::Button(selectorID.c_str(), { selectorWidth, 0.0F });
+		const auto selectorHovered = BridgeUI::IsItemHovered();
 
-		ImGuiMCP::SameLine();
-		static const auto resetIcon = FontAwesome::UnicodeToUtf8(0xf0e2);
-		const auto        resetID = std::format("reset-{}", a_stableID);
-		const auto        resetClicked = IconButton::Render(resetIcon, resetID);
-		const auto        resetHovered = ImGuiMCP::IsItemHovered();
-		ImGuiMCP::SetItemTooltip("Reset to default");
+		bool       resetClicked = false;
+		bool       resetHovered = false;
+		const auto renderReset = [&] {
+			IconButton::AlignToLastWidget(rowEnd);
+			static const auto resetIcon = FontAwesome::UnicodeToUtf8(0xf0e2);
+			const auto        resetID = std::format("reset-{}", a_stableID);
+			resetClicked = IconButton::Render(resetIcon, resetID);
+			resetHovered = BridgeUI::IsItemHovered();
+			BridgeUI::SetItemTooltip("Reset to default");
+		};
+		if (renderFrontend != Frontend::kFlick)
+			renderReset();
 
 		bool clearClicked = false;
 		bool clearHovered = false;
 		if (a_allowUnmap) {
-			ImGuiMCP::SameLine();
+			BridgeUI::SameLine();
 			static const auto clearIcon = FontAwesome::UnicodeToUtf8(0xf12d);
 			const auto        clearID = std::format("clear-{}", a_stableID);
 			clearClicked = IconButton::Render(clearIcon, clearID);
-			clearHovered = ImGuiMCP::IsItemHovered();
-			ImGuiMCP::SetItemTooltip("Clear binding");
+			clearHovered = BridgeUI::IsItemHovered();
+			BridgeUI::SetItemTooltip("Clear binding");
 		}
 
 		bool cancelClicked = false;
 		bool cancelHovered = false;
 		if (wasCapturing) {
-			ImGuiMCP::SameLine();
+			BridgeUI::SameLine();
 			const auto cancelID = std::format("Cancel##cancel-{}", a_stableID);
-			cancelClicked = ImGuiMCP::Button(cancelID.c_str(), { cancelWidth, 0.0F });
-			cancelHovered = ImGuiMCP::IsItemHovered();
+			cancelClicked = BridgeUI::Button(cancelID.c_str(), { cancelWidth, 0.0F });
+			cancelHovered = BridgeUI::IsItemHovered();
 		}
+		// Keep reset in the same rightmost action column as all other controls.
+		// The original SMF ordering remains unchanged.
+		if (renderFrontend == Frontend::kFlick)
+			renderReset();
 
 		if (clearClicked) {
 			capture.Cancel(a_stableID);

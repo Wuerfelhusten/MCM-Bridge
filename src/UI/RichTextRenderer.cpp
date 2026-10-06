@@ -1,4 +1,5 @@
 #include "MCMBridge/UI/RichTextRenderer.h"
+#include "MCMBridge/Framework/RenderContext.h"
 
 #include "SKSEMenuFramework.h"
 
@@ -71,16 +72,28 @@ namespace MCMBridge::RichTextRenderer
 {
 	void Render(std::string_view a_source)
 	{
+		if (nativeRichTextDraw) {
+			nativeRichTextDraw(ParseSkyUIRichText(a_source), false, false);
+			return;
+		}
 		RenderText(ParseSkyUIRichText(a_source), ImGuiMCP::ImGuiCol_Text);
 	}
 
 	void RenderDisabled(const SkyUIRichText& a_text)
 	{
+		if (nativeRichTextDraw) {
+			nativeRichTextDraw(a_text, true, false);
+			return;
+		}
 		RenderText(a_text, ImGuiMCP::ImGuiCol_TextDisabled);
 	}
 
 	void RenderHeader(std::string_view a_source)
 	{
+		if (nativeRichTextDraw) {
+			nativeRichTextDraw(ParseSkyUIRichText(a_source), false, true);
+			return;
+		}
 		const auto text = ParseSkyUIRichText(a_source);
 		const auto mixed = text.spans.size() > 1;
 		const auto color = mixed                                           ? ImGuiMCP::ImVec4{} :

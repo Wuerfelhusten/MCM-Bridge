@@ -6,7 +6,6 @@
 #include "MCMBridge/Plugin/NativeJournalEntry.h"
 #include "MCMBridge/Plugin/TaskScheduler.h"
 #include "MCMBridge/UI/WriteNotifications.h"
-#include "SKSEMenuFramework.h"
 
 namespace
 {
@@ -29,9 +28,9 @@ namespace
 				ui && ui->IsMenuOpen(RE::JournalMenu::MENU_NAME), unavailable);
 		}
 		if (open) {
-			if (auto* window = SKSEMenuFramework::GetMainWindow()) {
-				window->IsOpen.store(true);
-				SKSE::log::info("Journal close event completed; opened Menu Framework");
+			if (MCMBridge::FrameworkApi::GetSingleton().IsAvailable()) {
+				MCMBridge::FrameworkApi::GetSingleton().SetOpen(true);
+				SKSE::log::info("Journal close event completed; opened the selected MCM frontend");
 			}
 		}
 	}
@@ -53,11 +52,9 @@ namespace
 		void Call(Params& a_params) override
 		{
 			try {
-				auto*      window = MCMBridge::FrameworkApi::GetSingleton().IsAvailable() ?
-				                        SKSEMenuFramework::GetMainWindow() :
-				                        nullptr;
+				const auto available = MCMBridge::FrameworkApi::GetSingleton().IsAvailable();
 				const auto action = MCMBridge::ResolveJournalRedirect(
-					MCMBridge::BridgeSettingsService::GetSingleton().Get(), window != nullptr);
+					MCMBridge::BridgeSettingsService::GetSingleton().Get(), available);
 				if (action == MCMBridge::JournalRedirectAction::kUnavailable) {
 					SKSE::log::error("Native MCM frontend unavailable; original MCM entry suppressed");
 					return;
@@ -81,11 +78,11 @@ namespace
 						const std::scoped_lock lock(handoffMutex);
 						handoff.Cancel();
 					}
-					window->IsOpen.store(true);
+					MCMBridge::FrameworkApi::GetSingleton().SetOpen(true);
 					SKSE::log::warn("Journal close failed; opened native MCM frontend with Journal retained");
 				} else if (action == MCMBridge::JournalRedirectAction::kKeepJournal) {
-					window->IsOpen.store(true);
-					SKSE::log::info("Redirected Journal MCM entry to Menu Framework; keeping Journal open");
+					MCMBridge::FrameworkApi::GetSingleton().SetOpen(true);
+					SKSE::log::info("Redirected Journal MCM entry to the selected MCM frontend; keeping Journal open");
 					return;
 				}
 			} catch (...) {

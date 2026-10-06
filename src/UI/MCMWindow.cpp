@@ -2,8 +2,8 @@
 #include "MCMBridge/Core/CustomContentPolicy.h"
 
 #include "MCMBridge/Plugin/BridgeController.h"
+#include "MCMBridge/UI/FrontendUI.h"
 #include "MCMBridge/UI/PageRenderer.h"
-#include "SKSEMenuFramework.h"
 
 namespace
 {
@@ -28,14 +28,14 @@ namespace MCMBridge::MCMWindow
 		const auto requestedPage = a_pageID;
 		const auto routedPage = controller.ResolveHostedPage(a_modID, a_pageID);
 		if (routedPage.empty()) {
-			ImGuiMCP::TextWrapped("This MCM closed its page.");
-			if (ImGuiMCP::Button("Open page again"))
+			BridgeUI::TextWrapped("This MCM closed its page.");
+			if (BridgeUI::Button("Open page again"))
 				controller.ClearHostedPageRoute();
 			return;
 		}
 		if (routedPage != a_pageID) {
-			ImGuiMCP::TextWrapped("This MCM selected another page.");
-			if (ImGuiMCP::Button("Return to requested page")) {
+			BridgeUI::TextWrapped("This MCM selected another page.");
+			if (BridgeUI::Button("Return to requested page")) {
 				controller.ClearHostedPageRoute();
 			} else {
 				a_pageID = routedPage;
@@ -44,8 +44,8 @@ namespace MCMBridge::MCMWindow
 		controller.ObserveHostedPage(a_modID, a_pageID);
 		if (!controller.IsHostedViewReady(a_modID, a_pageID)) {
 			const auto error = controller.HostedViewError();
-			ImGuiMCP::TextWrapped("%s", error.empty() ? "Loading current MCM page..." : error.c_str());
-			if (!error.empty() && ImGuiMCP::Button("Retry"))
+			BridgeUI::TextWrapped("%s", error.empty() ? "Loading current MCM page..." : error.c_str());
+			if (!error.empty() && BridgeUI::Button("Retry"))
 				controller.RetryHostedPage();
 			return;
 		}
@@ -53,37 +53,37 @@ namespace MCMBridge::MCMWindow
 		const auto* mod = FindMod(*snapshot, a_modID);
 		const auto* page = mod ? FindPage(*mod, a_pageID) : nullptr;
 		if (!mod || !page) {
-			ImGuiMCP::TextDisabled("This MCM page is not available in the current game.");
-			if (ImGuiMCP::Button("Refresh")) {
+			BridgeUI::TextDisabled("This MCM page is not available in the current game.");
+			if (BridgeUI::Button("Refresh")) {
 				controller.RequestRefresh();
 			}
-			ImGuiMCP::SameLine();
-			if (ImGuiMCP::Button("Retry failed")) {
+			BridgeUI::SameLine();
+			if (BridgeUI::Button("Retry failed")) {
 				controller.RetryFailed();
 			}
 			return;
 		}
 
 		if (requestedPage != a_pageID) {
-			ImGuiMCP::TextUnformatted(page->displayName.c_str());
+			BridgeUI::TextUnformatted(page->displayName.c_str());
 		}
 		if (page->customContent) {
 			controller.ObserveCustomContent(*mod, *page);
-			ImGuiMCP::TextUnformatted(CustomContentPlaceholder(page->customContent->source).data());
-			ImGuiMCP::TextWrapped("The native MCM host does not support rendering this custom content yet. This does not mean its source file is missing.");
-			ImGuiMCP::TextWrapped("Source: %s", page->customContent->source.c_str());
+			BridgeUI::TextUnformatted(CustomContentPlaceholder(page->customContent->source).data());
+			BridgeUI::TextWrapped("The native MCM host does not support rendering this custom content yet. This does not mean its source file is missing.");
+			BridgeUI::TextWrapped("Source: %s", page->customContent->source.c_str());
 			return;
 		} else {
 			controller.ObserveHostedPage(mod->stableID, page->stableID);
 			if (page->controls.empty()) {
-				ImGuiMCP::TextDisabled("This page contains no supported controls.");
+				BridgeUI::TextDisabled("This page contains no supported controls.");
 			} else {
 				PageRenderer::Render(*snapshot, *page);
 			}
 		}
 		for (const auto& diagnostic : snapshot->diagnostics) {
 			if (diagnostic.sourceID == mod->stableID) {
-				ImGuiMCP::TextDisabled("%s", diagnostic.message.c_str());
+				BridgeUI::TextDisabled("%s", diagnostic.message.c_str());
 			}
 		}
 	}

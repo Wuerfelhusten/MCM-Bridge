@@ -2,7 +2,7 @@
 
 #include "MCMBridge/Core/SkyUIRichText.h"
 #include "MCMBridge/Plugin/BridgeController.h"
-#include "SKSEMenuFramework.h"
+#include "MCMBridge/UI/FrontendUI.h"
 
 #include <format>
 
@@ -44,12 +44,12 @@ namespace MCMBridge::ControlHelp
 {
 	void Render(const MCMControl& a_control)
 	{
-		if (!ImGuiMCP::IsItemHovered() || a_control.type == MCMControlType::kEmpty || a_control.type == MCMControlType::kHeader) {
+		if (!BridgeUI::IsItemHovered() || a_control.type == MCMControlType::kEmpty || a_control.type == MCMControlType::kHeader) {
 			return;
 		}
 		if (!a_control.help.empty()) {
 			const auto help = FormatHelp(a_control);
-			ImGuiMCP::SetItemTooltip("%s", help.c_str());
+			BridgeUI::SetItemTooltip("%s", help.c_str());
 		}
 		if (a_control.identity.backend == MCMBackendKind::kClassicSkyUI) {
 			BridgeController::GetSingleton().RequestControlHelp(a_control.identity, a_control.value);

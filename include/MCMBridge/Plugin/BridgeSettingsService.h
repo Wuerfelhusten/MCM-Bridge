@@ -15,6 +15,8 @@ namespace MCMBridge
 		void                          SetPauseDuringWrites(bool a_value);
 		void                          SetCloseJournalOnRedirect(bool a_value);
 		void                          SetGroupMCMs(bool a_value);
+		void                          SetPreferFlick(bool a_value);
+		void                          SetFlickPages(FlickPageSelector a_selector, int a_rows, int a_width);
 		void                          SetMCMRanges(bool a_enabled, std::string a_ends);
 		void                          SetAlias(std::string a_modID, std::string a_alias);
 		void                          SetProviderAliases(std::map<std::string, std::string, std::less<>> a_aliases);

@@ -1,4 +1,6 @@
 #include "MCMBridge/Framework/MCMEntryRegistry.h"
+#include "MCMBridge/Framework/FrameworkApi.h"
+#include "MCMBridge/Framework/RenderContext.h"
 
 #include "MCMBridge/Core/FrameworkMenuPath.h"
 #include "MCMBridge/Core/MCMOrganization.h"
@@ -267,7 +269,11 @@ namespace MCMBridge
 
 	void MCMEntryRegistry::Render(std::size_t a_slot) const
 	{
-		Entry entry;
+		const std::scoped_lock renderLock(FrameworkApi::RenderMutex());
+		if (!FrameworkApi::GetSingleton().CanRender(Frontend::kMenuFramework))
+			return;
+		RenderContext context(Frontend::kMenuFramework);
+		Entry         entry;
 		{
 			const std::scoped_lock lock(mutex);
 			if (a_slot >= entries.size() || !entries[a_slot].active) {
@@ -276,5 +282,19 @@ namespace MCMBridge
 			entry = entries[a_slot];
 		}
 		MCMWindow::Render(entry.modID, entry.pageID);
+	}
+	void MCMEntryRegistry::Deactivate()
+	{
+		const std::scoped_lock lock(mutex);
+		for (auto& [id, mod] : mods) {
+			if (mod.active)
+				SKSEMenuFramework::DeleteSection(MCMFrameworkSectionPath(mod.sectionSegment, mod.grouped, mod.range));
+			mod.active = false;
+		}
+		if (folderCreated)
+			SKSEMenuFramework::DeleteSection(std::string(mcmFolderPath));
+		folderCreated = false;
+		structureValid = false;
+		for (auto& entry : entries) entry.active = false;
 	}
 }

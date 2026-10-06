@@ -1,6 +1,6 @@
 #include "MCMBridge/UI/InputSelector.h"
 
-#include "SKSEMenuFramework.h"
+#include "MCMBridge/UI/FrontendUI.h"
 
 #include <algorithm>
 #include <array>
@@ -46,11 +46,11 @@ namespace MCMBridge::InputSelector
 		}
 
 		const auto widgetID = std::format("##{}", a_control.identity.stableID);
-		ImGuiMCP::BeginDisabled(!a_enabled);
-		const auto submitted = ImGuiMCP::InputText(
-			widgetID.c_str(), entry->second.buffer.data(), entry->second.buffer.size(), ImGuiMCP::ImGuiInputTextFlags_EnterReturnsTrue);
-		const auto committed = submitted || ImGuiMCP::IsItemDeactivatedAfterEdit();
-		ImGuiMCP::EndDisabled();
+		BridgeUI::BeginDisabled(!a_enabled);
+		const auto submitted = BridgeUI::InputText(
+			widgetID.c_str(), entry->second.buffer.data(), entry->second.buffer.size(), BridgeUI::ImGuiInputTextFlags_EnterReturnsTrue);
+		const auto committed = submitted || BridgeUI::IsItemDeactivatedAfterEdit();
+		BridgeUI::EndDisabled();
 		entry->second.status = a_control.writeStatus;
 		if (a_enabled && committed) {
 			return std::string(entry->second.buffer.data());

@@ -73,13 +73,14 @@ namespace MCMBridge
 					control.value = control.menu->selectedIndex;
 					control.defaultValue = control.menu->defaultIndex;
 				}
-				if (auto options = self->menuResolver.Resolve(control.identity); options) {
+				if (auto options = control.menu && !control.menu->options.empty() ? Result<MenuMetadata>(*control.menu) : self->menuResolver.Resolve(control.identity); options) {
 					if (control.menu) {
 						options->selectedIndex = control.menu->selectedIndex;
 						options->defaultIndex = control.menu->defaultIndex;
 					}
 					control.menu = std::move(*options);
 					control.writeCapability = control.disabled ? WriteCapability::kDisabled : WriteCapability::kWritable;
+					self->menuResolver.CancelCapture();
 				} else {
 					self->menuResolver.CancelCapture();
 					control.writeCapability = control.disabled ? WriteCapability::kDisabled : WriteCapability::kMissingOptions;

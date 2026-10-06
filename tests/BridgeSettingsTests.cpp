@@ -53,6 +53,9 @@ TEST_CASE("Missing Bridge settings enable the pause without creating a file")
 	REQUIRE(settings);
 	CHECK(settings->pauseDuringWrites);
 	CHECK(settings->closeJournalOnRedirect);
+	CHECK(settings->preferFlick);
+	CHECK(settings->flickPageSelector == MCMBridge::FlickPageSelector::kLeft);
+	CHECK(MCMBridge::BridgeSettings{}.flickPageSelector == MCMBridge::FlickPageSelector::kLeft);
 	CHECK_FALSE(settings->groupMCMs);
 	CHECK_FALSE(settings->alphabeticMCMs);
 	CHECK(settings->mcmRangeEnds == "CGLRZ");
@@ -63,11 +66,13 @@ TEST_CASE("Aliases persist by stable ID and reset without changing general prefe
 {
 	SettingsFixture           fixture;
 	MCMBridge::BridgeSettings settings;
+	settings.preferFlick = false;
 	MCMBridge::SetMCMAlias(settings, "classic-mod:0123456789abcdef", "  My MCM / Settings  ");
 	MCMBridge::SetMCMAlias(settings, "classic-mod:other", "My MCM / Settings");
 	REQUIRE(MCMBridge::SaveBridgeSettings(fixture.Path(), settings));
 	auto loaded = MCMBridge::LoadBridgeSettings(fixture.Path());
 	REQUIRE(loaded);
+	CHECK_FALSE(loaded->preferFlick);
 	CHECK(loaded->aliases.size() == 2);
 	CHECK(MCMBridge::ResolveMCMAlias(*loaded, "classic-mod:0123456789abcdef", "Original") == "My MCM / Settings");
 	MCMBridge::SetMCMAlias(*loaded, "classic-mod:0123456789abcdef", " \t ");
@@ -83,6 +88,34 @@ TEST_CASE("Aliases cannot inject ImGui IDs or control characters")
 	MCMBridge::BridgeSettings settings;
 	MCMBridge::SetMCMAlias(settings, "mod", "Name##hidden\nnext");
 	CHECK(MCMBridge::ResolveMCMAlias(settings, "mod", "Original") == "Name  hidden next");
+}
+
+TEST_CASE("FLICK page selection preferences persist independently")
+{
+	SettingsFixture           fixture;
+	MCMBridge::BridgeSettings settings;
+	settings.flickPageRows = 5;
+	settings.flickPageWidth = 35;
+	for (const auto mode : { MCMBridge::FlickPageSelector::kTop, MCMBridge::FlickPageSelector::kLeft, MCMBridge::FlickPageSelector::kDropdown }) {
+		settings.flickPageSelector = mode;
+		REQUIRE(MCMBridge::SaveBridgeSettings(fixture.Path(), settings));
+		const auto loaded = MCMBridge::LoadBridgeSettings(fixture.Path());
+		REQUIRE(loaded);
+		CHECK(loaded->flickPageSelector == mode);
+		CHECK(loaded->flickPageRows == 5);
+		CHECK(loaded->flickPageWidth == 35);
+		CHECK(loaded->preferFlick);
+		CHECK_FALSE(loaded->groupMCMs);
+	}
+	{
+		std::ofstream file(fixture.Path());
+		file << "[FLICK]\nPageSelector=99\nPageRows=-2\nPageWidth=99999\n";
+	}
+	const auto invalid = MCMBridge::LoadBridgeSettings(fixture.Path());
+	REQUIRE(invalid);
+	CHECK(invalid->flickPageSelector == MCMBridge::FlickPageSelector::kLeft);
+	CHECK(invalid->flickPageRows == 1);
+	CHECK(invalid->flickPageWidth == 45);
 }
 
 TEST_CASE("Provider aliases are not persisted as Bridge preferences")

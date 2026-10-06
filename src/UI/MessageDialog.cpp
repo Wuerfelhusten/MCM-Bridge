@@ -1,9 +1,10 @@
 #include "MCMBridge/UI/MessageDialog.h"
+#include "MCMBridge/Framework/FrontendWindow.h"
 
 #include "MCMBridge/Core/SkyUIRichText.h"
 #include "MCMBridge/Localization/SnapshotLocalizer.h"
 #include "MCMBridge/Plugin/BridgeController.h"
-#include "SKSEMenuFramework.h"
+#include "MCMBridge/UI/FrontendUI.h"
 
 #include <limits>
 #include <mutex>
@@ -22,10 +23,10 @@ namespace
 		std::string               cancel;
 	};
 
-	std::mutex                                 requestMutex;
-	std::optional<Request>                     pending;
-	SKSEMenuFramework::Model::WindowInterface* window{};
-	std::uint64_t                              nextRequest{};
+	std::mutex                 requestMutex;
+	std::optional<Request>     pending;
+	MCMBridge::FrontendWindow* window{};
+	std::uint64_t              nextRequest{};
 
 	void Complete(bool a_accepted, std::uint64_t a_expected = 0)
 	{
@@ -40,7 +41,7 @@ namespace
 			edit = pending->edit;
 			pending.reset();
 			if (window)
-				window->IsOpen.store(false);
+				window->SetOpen(false);
 		}
 		auto* tasks = SKSE::GetTaskInterface();
 		if (!tasks) {
@@ -94,7 +95,7 @@ namespace MCMBridge::MessageDialog
 			completeImmediately = !window;
 			pending = std::move(request);
 			if (window)
-				window->IsOpen.store(true);
+				window->SetOpen(true);
 		}
 		if (completeImmediately) {
 			SKSE::log::warn("Rejected an MCM message because the message window is unavailable");
@@ -121,29 +122,26 @@ namespace MCMBridge::MessageDialog
 		bool open = true;
 		if (focusedRequest != request->id) {
 			focusedRequest = request->id;
-			if (const auto* viewport = ImGuiMCP::GetMainViewport())
-				ImGuiMCP::SetNextWindowPos({ viewport->WorkPos.x + viewport->WorkSize.x * 0.5F,
-											   viewport->WorkPos.y + viewport->WorkSize.y * 0.5F },
-					ImGuiMCP::ImGuiCond_Always, { 0.5F, 0.5F });
-			ImGuiMCP::SetNextWindowFocus();
+			BridgeUI::SetNextWindowPos(BridgeUI::DisplayCenter(), BridgeUI::ImGuiCond_Always, { 0.5F, 0.5F });
+			BridgeUI::SetNextWindowFocus();
 		}
-		ImGuiMCP::SetNextWindowSize({ 580.0F, 0.0F }, ImGuiMCP::ImGuiCond_FirstUseEver);
-		if (ImGuiMCP::Begin("MCM Bridge - Message", &open, ImGuiMCP::ImGuiWindowFlags_AlwaysAutoResize)) {
+		BridgeUI::SetNextWindowSize({ 580.0F, 0.0F }, BridgeUI::ImGuiCond_FirstUseEver);
+		if (BridgeUI::Begin("MCM Bridge - Message", &open, BridgeUI::ImGuiWindowFlags_AlwaysAutoResize)) {
 			const auto message = PlainSkyUIText(request->message);
-			ImGuiMCP::TextWrapped("%s", message.c_str());
+			BridgeUI::TextWrapped("%s", message.c_str());
 			const auto accept = PlainSkyUIText(request->accept);
-			if (ImGuiMCP::Button(accept.empty() ? "OK" : accept.c_str())) {
+			if (BridgeUI::Button(accept.empty() ? "OK" : accept.c_str())) {
 				Complete(true, request->id);
 			}
 			const auto cancel = PlainSkyUIText(request->cancel);
 			if (!cancel.empty()) {
-				ImGuiMCP::SameLine();
-				if (ImGuiMCP::Button(cancel.c_str())) {
+				BridgeUI::SameLine();
+				if (BridgeUI::Button(cancel.c_str())) {
 					Complete(false, request->id);
 				}
 			}
 		}
-		ImGuiMCP::End();
+		BridgeUI::End();
 		if (!open)
 			Complete(false, request->id);
 	}
@@ -152,12 +150,17 @@ namespace MCMBridge::MessageDialog
 	{
 		const std::scoped_lock lock(requestMutex);
 		if (!window)
-			window = SKSEMenuFramework::AddWindow(Render, true);
+			window = FrontendWindow::Create("Message", "MCM Bridge - Message", Render, true, 580, 0, false, Cancel);
 		return window != nullptr;
 	}
 
 	void Cancel()
 	{
 		Complete(false);
+	}
+	bool IsPending()
+	{
+		const std::scoped_lock lock(requestMutex);
+		return pending.has_value();
 	}
 }

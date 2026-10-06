@@ -24,14 +24,13 @@ namespace
 	template <class BuildValues>
 	void ForwardToScaleform(std::string a_menuName, std::string a_target, BuildValues a_buildValues)
 	{
-		auto* ui = RE::UI::GetSingleton();
-		if (!ui || !ui->IsMenuOpen(a_menuName)) {
-			return;
-		}
 		auto* tasks = SKSE::GetTaskInterface();
 		if (!tasks) {
 			return;
 		}
+		// OpenCustomMenu queues its opening. Like SKSE's original UI.Invoke
+		// natives, resolve the movie only when the UI queue executes the call.
+		// A submission-time menu check would drop its initial content payload.
 		tasks->AddUITask([menuName = std::move(a_menuName),
 							 target = std::move(a_target),
 							 buildValues = std::move(a_buildValues)]() mutable {

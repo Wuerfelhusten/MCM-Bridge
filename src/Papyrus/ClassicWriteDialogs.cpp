@@ -79,7 +79,7 @@ namespace MCMBridge
 			[self = shared_from_this(), a_confirming] {
 				auto metadata = self->script->ReadMenuMetadata(self->control.identity.optionIndex);
 				if (self->menuCaptureActive) {
-					auto options = self->menuResolver->Resolve(self->control.identity);
+					auto options = metadata && !metadata->options.empty() ? metadata : self->menuResolver->Resolve(self->control.identity);
 					self->menuResolver->CancelCapture();
 					self->menuCaptureActive = false;
 					if (!options) {

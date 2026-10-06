@@ -1,38 +1,39 @@
 #include "MCMBridge/UI/WriteNotifications.h"
+#include "MCMBridge/Framework/FrontendWindow.h"
 
-#include "SKSEMenuFramework.h"
+#include "MCMBridge/UI/FrontendUI.h"
 
 #include <deque>
 #include <mutex>
 
 namespace
 {
-	std::mutex                                 mutex;
-	std::deque<std::string>                    messages;
-	SKSEMenuFramework::Model::WindowInterface* window{};
+	std::mutex                 mutex;
+	std::deque<std::string>    messages;
+	MCMBridge::FrontendWindow* window{};
 
 	void __stdcall Render()
 	{
 		const std::scoped_lock lock(mutex);
 		if (messages.empty()) {
-			window->IsOpen.store(false);
+			window->SetOpen(false);
 			return;
 		}
-		ImGuiMCP::SetNextWindowSize({ 620.0F, 0.0F }, ImGuiMCP::ImGuiCond_FirstUseEver);
+		BridgeUI::SetNextWindowSize({ 620.0F, 0.0F }, BridgeUI::ImGuiCond_FirstUseEver);
 		bool open = true;
 		bool dismiss{};
-		if (ImGuiMCP::Begin("MCM Bridge - Setting change", &open, ImGuiMCP::ImGuiWindowFlags_AlwaysAutoResize)) {
-			ImGuiMCP::PushTextWrapPos(ImGuiMCP::GetFontSize() * 32.0F);
-			ImGuiMCP::TextWrapped("%s", messages.front().c_str());
-			ImGuiMCP::PopTextWrapPos();
-			ImGuiMCP::Spacing();
-			dismiss = ImGuiMCP::Button("Dismiss");
-			ImGuiMCP::TextDisabled("Open Menu Framework to interact with this message.");
+		if (BridgeUI::Begin("MCM Bridge - Setting change", &open, BridgeUI::ImGuiWindowFlags_AlwaysAutoResize)) {
+			BridgeUI::PushTextWrapPos(BridgeUI::GetFontSize() * 32.0F);
+			BridgeUI::TextWrapped("%s", messages.front().c_str());
+			BridgeUI::PopTextWrapPos();
+			BridgeUI::Spacing();
+			dismiss = BridgeUI::Button("Dismiss");
+			BridgeUI::TextDisabled("Open your MCM frontend to interact with this message.");
 		}
-		ImGuiMCP::End();
+		BridgeUI::End();
 		if (dismiss || !open)
 			messages.pop_front();
-		window->IsOpen.store(!messages.empty());
+		window->SetOpen(!messages.empty());
 	}
 }
 
@@ -42,7 +43,7 @@ namespace MCMBridge::WriteNotifications
 	{
 		const std::scoped_lock lock(mutex);
 		if (!window)
-			window = SKSEMenuFramework::AddWindow(Render, false);
+			window = FrontendWindow::Create("Notifications", "MCM Bridge - Setting change", Render, false, 620, 0, false, Reset);
 		return window != nullptr;
 	}
 
@@ -51,7 +52,7 @@ namespace MCMBridge::WriteNotifications
 		const std::scoped_lock lock(mutex);
 		messages.push_back(std::move(a_message));
 		if (window)
-			window->IsOpen.store(true);
+			window->SetOpen(true);
 	}
 
 	void Reset()
@@ -59,6 +60,6 @@ namespace MCMBridge::WriteNotifications
 		const std::scoped_lock lock(mutex);
 		messages.clear();
 		if (window)
-			window->IsOpen.store(false);
+			window->SetOpen(false);
 	}
 }

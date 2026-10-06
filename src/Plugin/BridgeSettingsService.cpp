@@ -53,6 +53,12 @@ namespace MCMBridge
 			});
 		}
 	}
+	void BridgeSettingsService::SetPreferFlick(bool a_value)
+	{
+		Set(&BridgeSettings::preferFlick, a_value);
+		if (auto* tasks = SKSE::GetTaskInterface())
+			tasks->AddTask([] { FrameworkApi::GetSingleton().RequestPreferenceSwitch(); });
+	}
 
 	void BridgeSettingsService::SetMCMRanges(bool a_enabled, std::string a_ends)
 	{
@@ -69,6 +75,20 @@ namespace MCMBridge
 				FrameworkApi::GetSingleton().SynchronizeMCMs(BridgeController::GetSingleton().Snapshot()->mods);
 			});
 		}
+	}
+
+	void BridgeSettingsService::SetFlickPages(FlickPageSelector a_selector, int a_rows, int a_width)
+	{
+		if (a_selector < FlickPageSelector::kTop || a_selector > FlickPageSelector::kDropdown)
+			return;
+		{
+			const std::scoped_lock lock(mutex);
+			settings.flickPageSelector = a_selector;
+			settings.flickPageRows = std::clamp(a_rows, 1, 6);
+			settings.flickPageWidth = std::clamp(a_width, 15, 45);
+		}
+		if (auto* tasks = SKSE::GetTaskInterface())
+			tasks->AddTask([] { GetSingleton().Save(); });
 	}
 
 	void BridgeSettingsService::Set(bool BridgeSettings::* a_member, bool a_value)

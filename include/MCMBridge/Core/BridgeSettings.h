@@ -9,16 +9,27 @@
 
 namespace MCMBridge
 {
+	enum class FlickPageSelector
+	{
+		kTop,
+		kLeft,
+		kDropdown
+	};
+
 	struct BridgeSettings
 	{
 		bool                                            pauseDuringWrites{ true };
 		bool                                            closeJournalOnRedirect{ true };
+		bool                                            preferFlick{ true };
 		bool                                            groupMCMs{};
 		bool                                            alphabeticMCMs{};
 		std::string                                     mcmRangeEnds{ "CGLRZ" };
 		std::map<std::string, std::string, std::less<>> aliases;
 		// Session-only provider aliases are never written to MCMBridge.ini.
 		std::map<std::string, std::string, std::less<>> providerAliases;
+		FlickPageSelector                               flickPageSelector{ FlickPageSelector::kLeft };
+		int                                             flickPageRows{ 3 };
+		int                                             flickPageWidth{ 25 };
 	};
 
 	// Aliases are presentation preferences, never MCM identities or snapshot data.

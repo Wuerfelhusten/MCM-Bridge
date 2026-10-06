@@ -19,6 +19,11 @@ namespace MCMBridge::KeybindSelector
 	};
 
 	bool                Install();
+	bool                HandleFlickInput(const void* a_events);
+	bool                IsCapturingAny();
+	void                BeginFrame();
+	void                EndFrame();
+	void                CancelAll();
 	std::optional<Edit> Render(
 		std::string_view a_stableID,
 		std::string_view a_label,

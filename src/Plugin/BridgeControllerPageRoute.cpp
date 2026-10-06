@@ -1,6 +1,6 @@
+#include "MCMBridge/Framework/FrameworkApi.h"
 #include "MCMBridge/Plugin/BridgeController.h"
 #include "MCMBridge/UI/QuickOpenWindow.h"
-#include "SKSEMenuFramework.h"
 
 namespace MCMBridge
 {
@@ -37,8 +37,7 @@ namespace MCMBridge
 		QueueHostedDrive();
 		if (a_closeFrontend) {
 			QuickOpenWindow::Close();
-			if (auto* window = SKSEMenuFramework::GetMainWindow())
-				window->IsOpen.store(false);
+			FrameworkApi::GetSingleton().SetOpen(false);
 		}
 		SKSE::log::info("Native MCM requested frontend close: mod={} close_framework={}", a_modID, a_closeFrontend);
 	}

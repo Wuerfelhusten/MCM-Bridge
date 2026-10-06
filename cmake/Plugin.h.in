@@ -13,4 +13,5 @@ namespace Plugin
 
 	inline constexpr auto NAME = "@PROJECT_NAME@"sv;
 	inline constexpr auto AUTHOR = "@MCM_BRIDGE_AUTHOR@"sv;
+	inline constexpr auto PACKAGE_VERSION = "@MCM_BRIDGE_PACKAGE_VERSION@"sv;
 }

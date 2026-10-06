@@ -1,3 +1,4 @@
+#include "MCMBridge/Framework/RenderContext.h"
 #include "MCMBridge/UI/RichTextRenderer.h"
 #include "SKSEMenuFramework.h"
 
@@ -114,4 +115,33 @@ TEST_CASE("Clipped mixed-color headers restore style without submitting text dra
 	CHECK(Test::state.clipDepth == 0);
 	CHECK(Test::state.colors.empty());
 	CHECK(GetStyle()->Colors == theme);
+}
+
+TEST_CASE("Native frontend text never calls the Menu Framework renderer")
+{
+	Test::Reset();
+	static std::vector<MCMBridge::SkyUIRichText> received;
+	static std::vector<std::pair<bool, bool>>    modes;
+	received.clear();
+	modes.clear();
+	const auto draw = +[](const MCMBridge::SkyUIRichText& a_text, bool a_disabled, bool a_header) {
+		received.push_back(a_text);
+		modes.emplace_back(a_disabled, a_header);
+	};
+	{
+		MCMBridge::RenderContext context(MCMBridge::Frontend::kFlick, draw);
+		Render("100% <font color='#00FF00'>Ready</font>");
+		RenderDisabled(MCMBridge::ParseSkyUIRichText("Disabled"));
+		RenderHeader("<font color='#11ABA1'>Header</font>");
+	}
+	REQUIRE(received.size() == 3);
+	CHECK(received[0].plainText == "100% Ready");
+	CHECK(received[0].spans.back().color == 0x00FF00);
+	CHECK(modes[1] == std::pair{ true, false });
+	CHECK(modes[2] == std::pair{ false, true });
+	CHECK(Test::state.items.empty());
+	CHECK(Test::state.draws.empty());
+	CHECK(Test::state.colors.empty());
+	Render("Menu Framework again");
+	REQUIRE(Test::state.items.size() == 1);
 }

@@ -4,12 +4,13 @@
 #include "MCMBridge/Core/SkyUIFormat.h"
 #include "MCMBridge/Core/SkyUIRichText.h"
 #include "MCMBridge/UI/ControlHelp.h"
+#include "MCMBridge/UI/ControlRowRenderer.h"
 #include "MCMBridge/UI/ControlWrite.h"
+#include "MCMBridge/UI/FrontendUI.h"
 #include "MCMBridge/UI/IconButton.h"
 #include "MCMBridge/UI/InputSelector.h"
 #include "MCMBridge/UI/KeybindSelector.h"
 #include "MCMBridge/UI/RichTextRenderer.h"
-#include "SKSEMenuFramework.h"
 
 #include <unordered_map>
 
@@ -23,6 +24,7 @@ namespace
 	};
 
 	std::unordered_map<std::string, Draft> drafts;
+	thread_local float                     rowEnd{};
 
 	MCMBridge::MCMValue& GetDraft(const MCMBridge::MCMControl& a_control)
 	{
@@ -51,13 +53,19 @@ namespace
 
 	void AlignRight(float a_width)
 	{
-		const auto cursor = ImGuiMCP::GetCursorPosX();
-		const auto available = ImGuiMCP::GetContentRegionAvail().x;
-		ImGuiMCP::SetCursorPosX(cursor + (std::max)(0.0F, available - a_width));
+		const auto cursor = BridgeUI::GetCursorPosX();
+		const auto available = BridgeUI::GetContentRegionAvail().x;
+		BridgeUI::SetCursorPosX(cursor + (std::max)(0.0F, available - a_width));
 	}
 
 	void RenderValueRow(std::string_view a_label, std::string_view a_value)
 	{
+		if (MCMBridge::renderFrontend == MCMBridge::Frontend::kFlick) {
+			const auto value = MCMBridge::ParseSkyUIRichText(a_value);
+			MCMBridge::ControlRowRenderer::BeginRow(a_label, BridgeUI::CalcTextSize(value.plainText.c_str()).x, 0);
+			MCMBridge::RichTextRenderer::RenderDisabled(value);
+			return;
+		}
 		const auto plainLabel = MCMBridge::PlainSkyUIText(a_label);
 		if (!plainLabel.empty()) {
 			MCMBridge::RichTextRenderer::Render(a_label);
@@ -66,10 +74,10 @@ namespace
 			return;
 		}
 		if (!plainLabel.empty()) {
-			ImGuiMCP::SameLine();
+			BridgeUI::SameLine();
 		}
 		const auto richValue = MCMBridge::ParseSkyUIRichText(a_value);
-		AlignRight(ImGuiMCP::CalcTextSize(richValue.plainText.c_str()).x);
+		AlignRight(BridgeUI::CalcTextSize(richValue.plainText.c_str()).x);
 		MCMBridge::RichTextRenderer::RenderDisabled(richValue);
 	}
 
@@ -83,23 +91,27 @@ namespace
 
 	float ReservedResetWidth(const MCMBridge::MCMControl& a_control)
 	{
-		return HasReset(a_control) ? ImGuiMCP::GetFrameHeight() + ImGuiMCP::GetStyle()->ItemSpacing.x : 0.0F;
+		return HasReset(a_control) ? BridgeUI::GetFrameHeight() + BridgeUI::GetStyle()->ItemSpacing.x : 0.0F;
 	}
 
 	void BeginWidgetRow(std::string_view a_label, const MCMBridge::MCMControl& a_control)
 	{
-		const auto start = ImGuiMCP::GetCursorPosX();
-		const auto width = ImGuiMCP::GetContentRegionAvail().x;
+		if (MCMBridge::renderFrontend == MCMBridge::Frontend::kFlick) {
+			MCMBridge::ControlRowRenderer::BeginRow(a_label, (std::max)(BridgeUI::GetFontSize() * 6, BridgeUI::GetContentRegionAvail().x * 0.48F), ReservedResetWidth(a_control));
+			return;
+		}
+		const auto start = BridgeUI::GetCursorPosX();
+		const auto width = BridgeUI::GetContentRegionAvail().x;
 		const auto plainLabel = MCMBridge::PlainSkyUIText(a_label);
 		if (!plainLabel.empty()) {
 			MCMBridge::RichTextRenderer::Render(a_label);
-			ImGuiMCP::SameLine();
+			BridgeUI::SameLine();
 		}
 		const auto widgetWidth = (std::max)(140.0F, width * 0.48F);
 		const auto desiredPosition = start + (std::max)(0.0F, width - widgetWidth);
-		const auto widgetPosition = (std::max)(ImGuiMCP::GetCursorPosX(), desiredPosition);
-		ImGuiMCP::SetCursorPosX(widgetPosition);
-		ImGuiMCP::SetNextItemWidth((std::max)(40.0F, start + width - widgetPosition - ReservedResetWidth(a_control)));
+		const auto widgetPosition = (std::max)(BridgeUI::GetCursorPosX(), desiredPosition);
+		BridgeUI::SetCursorPosX(widgetPosition);
+		BridgeUI::SetNextItemWidth((std::max)(40.0F, start + width - widgetPosition - ReservedResetWidth(a_control)));
 	}
 
 	void RenderReset(const MCMBridge::MCMSnapshot& a_snapshot, const MCMBridge::MCMControl& a_control)
@@ -107,14 +119,14 @@ namespace
 		if (!HasReset(a_control)) {
 			return;
 		}
-		ImGuiMCP::SameLine();
+		MCMBridge::IconButton::AlignToLastWidget(rowEnd);
 		static const auto resetIcon = FontAwesome::UnicodeToUtf8(0xf0e2);
 		const auto        resetID = std::format("reset-{}", a_control.identity.stableID);
 		const auto        editable = MCMBridge::ControlWrite::CanReset(a_snapshot, a_control);
-		ImGuiMCP::BeginDisabled(!editable);
+		BridgeUI::BeginDisabled(!editable);
 		const auto clicked = MCMBridge::IconButton::Render(resetIcon, resetID);
-		ImGuiMCP::SetItemTooltip("Reset to default");
-		ImGuiMCP::EndDisabled();
+		BridgeUI::SetItemTooltip("Reset to default");
+		BridgeUI::EndDisabled();
 		if (clicked && editable) {
 			MCMBridge::ControlWrite::Reset(a_snapshot, a_control);
 		}
@@ -136,12 +148,12 @@ namespace
 		const auto editable = MCMBridge::ControlWrite::IsEditable(a_snapshot, a_control);
 		const auto visibleLabel = MCMBridge::PlainSkyUIText(display.empty() ? std::string_view("Activate") : display);
 		const auto buttonID = std::format("{}##{}", visibleLabel, a_control.identity.stableID);
-		const auto width = ImGuiMCP::GetContentRegionAvail().x - ReservedResetWidth(a_control);
-		ImGuiMCP::BeginDisabled(!editable);
-		if (ImGuiMCP::Button(buttonID.c_str(), { width, 0.0F }) && editable) {
+		const auto width = BridgeUI::GetContentRegionAvail().x - ReservedResetWidth(a_control);
+		BridgeUI::BeginDisabled(!editable);
+		if (BridgeUI::Button(buttonID.c_str(), { width, 0.0F }) && editable) {
 			MCMBridge::ControlWrite::Activate(a_snapshot, a_control);
 		}
-		ImGuiMCP::EndDisabled();
+		BridgeUI::EndDisabled();
 		RenderReset(a_snapshot, a_control);
 	}
 
@@ -167,9 +179,28 @@ namespace
 		BeginWidgetRow(a_control.label, a_control);
 		const auto widgetID = std::format("##{}", a_control.identity.stableID);
 		const auto editable = MCMBridge::ControlWrite::IsEditable(a_snapshot, a_control);
-		ImGuiMCP::BeginDisabled(!editable);
-		if (!ImGuiMCP::BeginCombo(widgetID.c_str(), preview.c_str())) {
-			ImGuiMCP::EndDisabled();
+		BridgeUI::BeginDisabled(!editable);
+		if (MCMBridge::renderFrontend == MCMBridge::Frontend::kFlick) {
+			std::vector<std::string> labels;
+			std::vector<const char*> items;
+			labels.reserve(metadata->options.size());
+			items.reserve(metadata->options.size());
+			for (std::size_t index = 0; index < metadata->options.size(); ++index) {
+				const auto& option = index < options.size() ? options[index] : metadata->options[index];
+				labels.push_back(MCMBridge::PlainSkyUIText(option));
+			}
+			for (const auto& label : labels)
+				items.push_back(label.c_str());
+			if (BridgeUI::Combo(widgetID.c_str(), &selected, items.data(), static_cast<int>(items.size())) && editable) {
+				SetDraft(a_control, selected);
+				MCMBridge::ControlWrite::Submit(a_snapshot, a_control, selected);
+			}
+			BridgeUI::EndDisabled();
+			RenderReset(a_snapshot, a_control);
+			return;
+		}
+		if (!BridgeUI::BeginCombo(widgetID.c_str(), preview.c_str())) {
+			BridgeUI::EndDisabled();
 			RenderReset(a_snapshot, a_control);
 			return;
 		}
@@ -177,14 +208,14 @@ namespace
 			const auto& option = index < options.size() ? options[index] : metadata->options[index];
 			const auto  optionID = std::format(
 				"{}##{}-{}", MCMBridge::PlainSkyUIText(option), a_control.identity.stableID, index);
-			if (ImGuiMCP::Selectable(optionID.c_str(), static_cast<std::int32_t>(index) == selected)) {
+			if (BridgeUI::Selectable(optionID.c_str(), static_cast<std::int32_t>(index) == selected)) {
 				selected = static_cast<std::int32_t>(index);
 				SetDraft(a_control, selected);
 				MCMBridge::ControlWrite::Submit(a_snapshot, a_control, selected);
 			}
 		}
-		ImGuiMCP::EndCombo();
-		ImGuiMCP::EndDisabled();
+		BridgeUI::EndCombo();
+		BridgeUI::EndDisabled();
 		RenderReset(a_snapshot, a_control);
 	}
 
@@ -203,12 +234,12 @@ namespace
 		BeginWidgetRow(a_control.label, a_control);
 		const auto buttonID = std::format("{}##{}", display.empty() ? "Next" : display, a_control.identity.stableID);
 		const auto editable = MCMBridge::ControlWrite::IsEditable(a_snapshot, a_control);
-		const auto width = ImGuiMCP::GetContentRegionAvail().x - ReservedResetWidth(a_control);
-		ImGuiMCP::BeginDisabled(!editable);
-		if (ImGuiMCP::Button(buttonID.c_str(), { width, 0.0F }) && editable) {
+		const auto width = BridgeUI::GetContentRegionAvail().x - ReservedResetWidth(a_control);
+		BridgeUI::BeginDisabled(!editable);
+		if (BridgeUI::Button(buttonID.c_str(), { width, 0.0F }) && editable) {
 			MCMBridge::ControlWrite::Activate(a_snapshot, a_control);
 		}
-		ImGuiMCP::EndDisabled();
+		BridgeUI::EndDisabled();
 		RenderReset(a_snapshot, a_control);
 	}
 }
@@ -227,7 +258,9 @@ namespace MCMBridge::ControlRenderer
 		}
 
 		const auto widgetID = std::format("##{}", a_control.identity.stableID);
-		ImGuiMCP::BeginGroup();
+		// Capture each row before label wrapping changes the cursor position.
+		rowEnd = BridgeUI::GetCursorPosX() + BridgeUI::GetContentRegionAvail().x;
+		BridgeUI::BeginGroup();
 		switch (a_control.type) {
 		case MCMControlType::kEmpty:
 			break;
@@ -242,18 +275,23 @@ namespace MCMBridge::ControlRenderer
 				auto&      draft = GetDraft(a_control);
 				auto       value = std::get_if<bool>(&draft) ? std::get<bool>(draft) : false;
 				const auto editable = ControlWrite::IsEditable(a_snapshot, a_control);
-				const auto start = ImGuiMCP::GetCursorPosX();
-				const auto width = ImGuiMCP::GetContentRegionAvail().x;
-				RichTextRenderer::Render(a_control.label);
-				ImGuiMCP::SameLine();
-				const auto desiredPosition = start + (std::max)(0.0F, width - ImGuiMCP::GetFrameHeight() - ReservedResetWidth(a_control));
-				ImGuiMCP::SetCursorPosX((std::max)(ImGuiMCP::GetCursorPosX(), desiredPosition));
-				ImGuiMCP::BeginDisabled(!editable);
-				if (ImGuiMCP::Checkbox(widgetID.c_str(), &value)) {
+				if (renderFrontend == Frontend::kFlick) {
+					// Native checkbox icons also reserve their own trailing label gap.
+					ControlRowRenderer::BeginRow(a_control.label, BridgeUI::GetFrameHeight() * 2, ReservedResetWidth(a_control));
+				} else {
+					const auto start = BridgeUI::GetCursorPosX();
+					const auto width = BridgeUI::GetContentRegionAvail().x;
+					RichTextRenderer::Render(a_control.label);
+					BridgeUI::SameLine();
+					const auto desiredPosition = start + (std::max)(0.0F, width - BridgeUI::GetFrameHeight() - ReservedResetWidth(a_control));
+					BridgeUI::SetCursorPosX((std::max)(BridgeUI::GetCursorPosX(), desiredPosition));
+				}
+				BridgeUI::BeginDisabled(!editable);
+				if (BridgeUI::Checkbox(widgetID.c_str(), &value)) {
 					SetDraft(a_control, value);
 					ControlWrite::Submit(a_snapshot, a_control, value);
 				}
-				ImGuiMCP::EndDisabled();
+				BridgeUI::EndDisabled();
 				RenderReset(a_snapshot, a_control);
 				break;
 			}
@@ -263,17 +301,17 @@ namespace MCMBridge::ControlRenderer
 				auto       value = std::get_if<float>(&draft) ? std::get<float>(draft) : 0.0F;
 				const auto editable = ControlWrite::IsEditable(a_snapshot, a_control);
 				BeginWidgetRow(a_control.label, a_control);
-				ImGuiMCP::BeginDisabled(!editable);
+				BridgeUI::BeginDisabled(!editable);
 				bool edited = false;
 				if (a_control.slider && a_control.slider->availability == MetadataAvailability::kAvailable) {
 					const auto format = MakeSliderPrintfFormat(a_control.slider->format);
-					edited = ImGuiMCP::SliderFloat(
+					edited = BridgeUI::SliderFloat(
 						widgetID.c_str(), &value, a_control.slider->minimum, a_control.slider->maximum, format.c_str());
 				} else {
-					edited = ImGuiMCP::DragFloat(widgetID.c_str(), &value, 1.0F);
+					edited = BridgeUI::DragFloat(widgetID.c_str(), &value, 1.0F);
 				}
-				const auto committed = ImGuiMCP::IsItemDeactivatedAfterEdit();
-				ImGuiMCP::EndDisabled();
+				const auto committed = BridgeUI::IsItemDeactivatedAfterEdit();
+				BridgeUI::EndDisabled();
 				if (edited) {
 					SetDraft(a_control, value);
 				}
@@ -298,13 +336,13 @@ namespace MCMBridge::ControlRenderer
 				auto       color = UnpackARGB(source);
 				const auto editable = ControlWrite::IsEditable(a_snapshot, a_control);
 				BeginWidgetRow(a_control.label, a_control);
-				ImGuiMCP::BeginDisabled(!editable);
-				const auto edited = ImGuiMCP::ColorEdit4(widgetID.c_str(), color.data(),
-					ImGuiMCP::ImGuiColorEditFlags_NoAlpha | ImGuiMCP::ImGuiColorEditFlags_DisplayHex |
-						ImGuiMCP::ImGuiColorEditFlags_Uint8 |
-						ImGuiMCP::ImGuiColorEditFlags_InputRGB);
-				const auto committed = ImGuiMCP::IsItemDeactivatedAfterEdit();
-				ImGuiMCP::EndDisabled();
+				BridgeUI::BeginDisabled(!editable);
+				const auto edited = BridgeUI::ColorEdit4(widgetID.c_str(), color.data(),
+					BridgeUI::ImGuiColorEditFlags_NoAlpha | BridgeUI::ImGuiColorEditFlags_DisplayHex |
+						BridgeUI::ImGuiColorEditFlags_Uint8 |
+						BridgeUI::ImGuiColorEditFlags_InputRGB);
+				const auto committed = BridgeUI::IsItemDeactivatedAfterEdit();
+				BridgeUI::EndDisabled();
 				if (edited) {
 					SetDraft(a_control, PackARGB(color));
 				}
@@ -319,10 +357,10 @@ namespace MCMBridge::ControlRenderer
 				auto&      draft = GetDraft(a_control);
 				const auto selected = std::get_if<std::int32_t>(&draft) ? std::get<std::int32_t>(draft) : -1;
 				const auto editable = ControlWrite::IsEditable(a_snapshot, a_control);
-				ImGuiMCP::BeginDisabled(!editable);
+				BridgeUI::BeginDisabled(!editable);
 				const auto changed = KeybindSelector::Render(
 					a_control.identity.stableID, a_control.label, selected, editable, a_control.allowUnmap);
-				ImGuiMCP::EndDisabled();
+				BridgeUI::EndDisabled();
 				if (changed) {
 					if (changed->action == KeybindSelector::Action::kReset) {
 						ControlWrite::Reset(a_snapshot, a_control);
@@ -347,7 +385,7 @@ namespace MCMBridge::ControlRenderer
 			RenderValueRow(a_control.label, "Unsupported");
 			break;
 		}
-		ImGuiMCP::EndGroup();
+		BridgeUI::EndGroup();
 		ControlHelp::Render(a_control);
 	}
 }

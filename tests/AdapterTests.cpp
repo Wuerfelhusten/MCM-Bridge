@@ -565,6 +565,52 @@ TEST_CASE("A host adapter supplies sessions without Skyrim types")
 	CHECK(session->ReadPages() == std::vector<std::string>{ "General" });
 }
 
+TEST_CASE("Hosted dropdowns consume native options without requiring Scaleform capture")
+{
+	using namespace MCMBridge;
+	auto  script = ScriptWithToggle();
+	auto& control = script->page.controls.front();
+	control.type = MCMControlType::kMenu;
+	control.writeCapability = WriteCapability::kMissingOptions;
+	script->menuMetadata = MenuMetadata{ .options = { "First", "Second" }, .selectedIndex = 1, .defaultIndex = 0, .availability = MetadataAvailability::kAvailable };
+	ScopedMenuOptionResolver resolver;
+	bool                     missing{};
+	SECTION("Native options are sufficient") {}
+	SECTION("Legacy buffer-only options are still captured")
+	{
+		script->menuBufferOnly = true;
+		script->onComplete = [&resolver](auto a_method) {
+			if (a_method == ClassicMethod::kRequestMenuDialogData)
+				resolver.ObserveInvokeStringArray("Journal Menu", "_root.ConfigPanelFader.configPanel.setMenuDialogOptions", { "First", "Second" });
+		};
+	}
+	SECTION("Missing options stay read-only")
+	{
+		script->menuBufferOnly = true;
+		missing = true;
+	}
+	SECTION("Disabled native menus stay disabled") { control.disabled = true; }
+	FakeTimer                      timer;
+	std::optional<Result<MCMPage>> result;
+	auto                           operation = std::make_shared<HostedPageOperation>(Descriptor(), script, "General", 0, false, HostedPageMode::kActivate, [] { return false; }, [&](auto a_value) { result = std::move(a_value); }, timer);
+	operation->SetMenuResolver(resolver);
+	operation->Start();
+	REQUIRE(result);
+	REQUIRE(*result);
+	const auto& actual = (*result)->controls.front();
+	if (missing) {
+		CHECK_FALSE(actual.menu);
+		CHECK(actual.writeCapability == WriteCapability::kMissingOptions);
+	} else {
+		REQUIRE(actual.menu);
+		CHECK(actual.menu->options == std::vector<std::string>{ "First", "Second" });
+		CHECK(std::get<std::int32_t>(actual.value) == 1);
+		CHECK(actual.writeCapability == (control.disabled ? WriteCapability::kDisabled : WriteCapability::kWritable));
+	}
+	CHECK(CallCount(*script, ClassicMethod::kRequestMenuDialogData) == 1);
+	CHECK_FALSE(resolver.Resolve(control.identity));
+}
+
 TEST_CASE("Classic scan succeeds and closes the config")
 {
 	auto                                                script = ScriptWithToggle();
@@ -941,6 +987,8 @@ TEST_CASE("Menu write validates the live list before writing")
 	std::optional<MCMBridge::Result<MCMBridge::MCMValue>> result;
 	auto                                                  operation = std::make_shared<MCMBridge::ClassicWriteOperation>(
 		script, control, command, [] { return false; }, [&](auto a_value) { result = std::move(a_value); }, timer);
+	MCMBridge::UnavailableMenuOptionResolver resolver;
+	operation->SetMenuResolver(resolver);
 	operation->Start();
 	REQUIRE(result);
 	if (changed) {
@@ -1338,6 +1386,59 @@ TEST_CASE("Hosted write commit closes and reopens the config before rebuilding t
 	CHECK(script->calls[2] == MCMBridge::ClassicMethod::kSetPage);
 	CHECK(script->configOpen);
 	CHECK(commit->IsConfigOpen());
+}
+
+TEST_CASE("Hosted write commit republishes current dialog values and slider bounds")
+{
+	auto script = ScriptWithToggle();
+	script->configOpen = true;
+	script->deferCallbacks = true;
+	auto& slider = script->page.controls.front();
+	slider.type = MCMBridge::MCMControlType::kSlider;
+	slider.identity.optionIndex = 0;
+	slider.value = 0.0F;
+	slider.slider = MCMBridge::SliderMetadata{ .format = "{1}", .availability = MCMBridge::MetadataAvailability::kMissing };
+	script->sliderMetadata = MCMBridge::SliderMetadata{ .start = 7, .defaultValue = 2, .maximum = 10, .step = 0.5F, .availability = MCMBridge::MetadataAvailability::kAvailable };
+	auto menu = slider;
+	menu.identity.stableID = "setting:menu";
+	menu.identity.optionIndex = 1;
+	menu.type = MCMBridge::MCMControlType::kMenu;
+	menu.slider.reset();
+	menu.value = std::string("Second");
+	script->page.controls.push_back(menu);
+	script->menuMetadata = MCMBridge::MenuMetadata{ .options = { "First", "Second" }, .selectedIndex = 1, .defaultIndex = 0, .availability = MCMBridge::MetadataAvailability::kAvailable };
+	script->onComplete = [&](auto a_method) {
+		if (a_method == MCMBridge::ClassicMethod::kCloseConfig)
+			script->sliderMetadata->maximum = 25;
+	};
+	FakeTimer                                            timer;
+	std::optional<MCMBridge::Result<MCMBridge::MCMPage>> result;
+	auto                                                 commit = std::make_shared<MCMBridge::HostedPageOperation>(
+		Descriptor(), script, "General", 0, true, MCMBridge::HostedPageMode::kCommit,
+		[] { return false; }, [&](auto a_value) { result = std::move(a_value); }, timer);
+	MCMBridge::UnavailableMenuOptionResolver resolver;
+	commit->SetMenuResolver(resolver);
+	commit->Start();
+	for (int index = 0; index < 3; ++index)
+		script->CompleteNext();
+	CHECK_FALSE(result);
+	while (!script->callbacks.empty())
+		script->CompleteNext();
+	REQUIRE(result);
+	REQUIRE(*result);
+	const auto& controls = (*result)->controls;
+	REQUIRE(controls.front().slider);
+	CHECK(controls.front().slider->availability == MCMBridge::MetadataAvailability::kAvailable);
+	CHECK(controls.front().slider->maximum == 25);
+	CHECK(controls.front().slider->step == 0.5F);
+	CHECK(controls.front().slider->format == "{1}");
+	CHECK(std::get<float>(controls.front().value) == 7);
+	REQUIRE(controls[1].menu);
+	CHECK(controls[1].menu->options == std::vector<std::string>{ "First", "Second" });
+	CHECK(std::get<std::int32_t>(controls[1].value) == 1);
+	CHECK(CallCount(*script, MCMBridge::ClassicMethod::kRequestSliderDialogData) == 1);
+	CHECK(CallCount(*script, MCMBridge::ClassicMethod::kRequestMenuDialogData) == 1);
+	CHECK_FALSE(Called(*script, MCMBridge::ClassicMethod::kSetSliderValue));
 }
 
 TEST_CASE("Hosted close ends the config once")

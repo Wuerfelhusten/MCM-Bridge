@@ -191,6 +191,9 @@ namespace MCMBridge
 					std::move(a_result), std::move(navigation));
 			},
 			TaskScheduler::GetSingleton());
+		// This page is published as fresh after commit. Collect dialog data too;
+		// raw buffers alone replace sliders with unavailable-metadata drag fields.
+		activeHostedPage->SetMenuResolver(menuResolver);
 		StartHostedPageOperation();
 	}
 
